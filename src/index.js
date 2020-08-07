@@ -1,0 +1,28 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
+const express = require("express");
+const {graphqlHTTP} = require("express-graphql");
+const mongoose = require("mongoose");
+const graphqlSchema = require("./graphql/schema");
+const graphqlResolvers = require("./graphql/resolvers");
+const mongoUri = `${process.env.MONGO_URI}/${process.env.MONGO_DB}`
+const mongoOptions = { useNewUrlParser: true, useUnifiedTopology: true }
+
+const app = express();
+
+app.use(
+  "/graphql",
+  graphqlHTTP({
+    schema: graphqlSchema,
+    rootValue: graphqlResolvers,
+    graphiql: true,
+  })
+)
+
+mongoose
+  .connect(mongoUri, mongoOptions)
+  .then(() => app.listen(process.env.SERVER_PORT, console.log("Server is running")))
+  .catch(error => {
+    console.log(error);
+  })

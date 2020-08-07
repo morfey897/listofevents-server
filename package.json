@@ -1,0 +1,31 @@
+{
+  "name": "listofevents-server",
+  "version": "1.0.0",
+  "description": "Server for list of events in the World",
+  "scripts": {
+    "start": "export NODE_ENV=development && node ./src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/morfey897/listofevents-server.git"
+  },
+  "author": "Maksym Cherniavskyi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/morfey897/listofevents-server/issues"
+  },
+  "homepage": "https://github.com/morfey897/listofevents-server#readme",
+  "devDependencies": {
+    "eslint": "^7.6.0",
+    "nodemon": "^2.0.4"
+  },
+  "dependencies": {
+    "cross-env": "^7.0.2",
+    "dotenv": "^8.2.0",
+    "express": "^4.17.1",
+    "express-graphql": "^0.11.0",
+    "graphql": "^15.3.0",
+    "mongoose": "^5.9.27"
+  }
+}
