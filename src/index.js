@@ -1,5 +1,6 @@
 const dotenv = require('dotenv');
 dotenv.config();
+const CFG = require("./config");
 
 const express = require("express");
 const {graphqlHTTP} = require("express-graphql");
