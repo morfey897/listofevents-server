@@ -8,12 +8,12 @@ const eventSchema = new Schema(
     country: Schema.Types.String,
     city: Schema.Types.String,
     category: Schema.Types.String,
-    location: {
-      name: Schema.Types.String, 
+    place: Schema.Types.String,
+    geo: {
       lat: Schema.Types.Number,
       lon: Schema.Types.Number,
     },
-    event: Schema.Types.String,
+    description: Schema.Types.String,
   }
 )
 

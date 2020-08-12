@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Server for list of events in the World",
   "scripts": {
-    "start": "export NODE_ENV=development && node ./src/index.js",
+    "start": "export NODE_ENV=development && nodemon ./src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -26,6 +26,7 @@
     "express": "^4.17.1",
     "express-graphql": "^0.11.0",
     "graphql": "^15.3.0",
+    "graphql-iso-date": "^3.6.1",
     "mongoose": "^5.9.27"
   }
 }

@@ -4,8 +4,7 @@ dotenv.config();
 const express = require("express");
 const {graphqlHTTP} = require("express-graphql");
 const mongoose = require("mongoose");
-const graphqlSchema = require("./graphql/schema");
-const graphqlResolvers = require("./graphql/resolvers");
+const AppSchema = require("./graphql");
 const mongoUri = `${process.env.MONGO_URI}/${process.env.MONGO_DB}`
 const mongoOptions = { useNewUrlParser: true, useUnifiedTopology: true }
 
@@ -14,8 +13,8 @@ const app = express();
 app.use(
   "/graphql",
   graphqlHTTP({
-    schema: graphqlSchema,
-    rootValue: graphqlResolvers,
+    schema: AppSchema,
+    // rootValue,
     graphiql: true,
   })
 )
