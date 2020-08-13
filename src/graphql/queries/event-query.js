@@ -18,6 +18,14 @@ const FilterType = new GraphQLInputObjectType({
   })
 });
 
+const PaginateType = new GraphQLInputObjectType({
+  name: "PaginateType",
+  fields: () => ({
+    limit: { type: GraphQLInt },
+    offset: { type: GraphQLInt },
+  })
+});
+
 const getEvent = {
   type: EventType,
   args: {
@@ -40,10 +48,11 @@ const getEvents = {
   type: new GraphQLList(EventType),
   description: "List of all events",
   args: {
-    sortBy: { type: new GraphQLNonNull(GraphQLInt) },
-    filter: { type: new GraphQLNonNull(FilterType) }
+    filter: { type: new GraphQLNonNull(FilterType) },
+    sortBy: { type: GraphQLInt },
+    paginate: { type: PaginateType }
   },
-  resolve: async function (_, { sortBy, filter: {country, city, place, category, date}}) {
+  resolve: async function (_, { filter: {country, city, place, category, date}, sortBy, paginate}) {
     const fCountry = filterMap(country, "country");
     const fCity = filterMap(city, "city");
     const fPlace = filterMap(place, "place");
@@ -64,9 +73,14 @@ const getEvents = {
     if (dateTo) {
       fMong.push({date: {$lte: dateTo}});
     }
-    let events = await EventModel.find(fMong.length ? {
-      $and: fMong
-    } : {}).sort({ date: sortBy > 0 ? 1 : (sortBy < 0 ? -1 : 0) });
+    let events = await EventModel.find(
+      fMong.length ? {$and: fMong} : {}, 
+      null, 
+      {
+        sort: { date: sortBy > 0 ? 1 : (sortBy < 0 ? -1 : 0) }
+      })
+      .skip(paginate && paginate.offset || 0)
+      .limit(paginate && paginate.limit || Number.MAX_SAFE_INTEGER);
     return events;
   }
 }
