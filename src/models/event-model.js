@@ -5,11 +5,11 @@ const Schema = mongoose.Schema
 const eventSchema = new Schema(
   {
     date: Schema.Types.Date,
-    country: Schema.Types.String,
-    city: Schema.Types.String,
-    category: Schema.Types.String,
-    place: Schema.Types.String,
-    geo: {
+    country_id: Schema.Types.ObjectId,
+    city_id: Schema.Types.ObjectId,
+    category_id: Schema.Types.ObjectId,
+    place: {
+      name: Schema.Types.String,
       lat: Schema.Types.Number,
       lon: Schema.Types.Number,
     },
@@ -17,4 +17,4 @@ const eventSchema = new Schema(
   }
 )
 
-module.exports = mongoose.model("Event", eventSchema)
+module.exports = mongoose.model("Event", eventSchema);

@@ -2,14 +2,29 @@ const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLInputObjectType, GraphQLN
 const { GraphQLDateTime } = require('graphql-iso-date');
 
 const EventModel = require('../../models/event-model');
+const CountryModel = require('../../models/country-model');
+const CityModel = require('../../models/city-model');
+const CategoryModel = require('../../models/category-model');
+
 const EventType = require('../types/event-type');
 
 const { isValidId } = require('../../utils/validation-utill');
 
-const GeoType = new GraphQLInputObjectType({
-  name: "GEOInputType",
-  description: "geo position",
+const getEss = async (CoreModel, value) => {
+  let model;
+  if (isValidId(value)) {
+    model = await CoreModel.findById(value);
+  } else {
+    model = await CoreModel.find({$or:[{ru: {$regex: value, $options: "i"}}, {en: {$regex: value, $options: "i"}}]});
+  }
+  return model;
+} 
+
+const PlaceType = new GraphQLInputObjectType({
+  name: "PlaceInputType",
+  description: "place with geo position",
   fields: () => ({
+    name: { type: new GraphQLNonNull(GraphQLString) },
     lat: { type: GraphQLFloat },
     lon: { type: GraphQLFloat },
   })
@@ -21,15 +36,38 @@ const createEvent = {
     date: { type: new GraphQLNonNull(GraphQLDateTime) },
     country: { type: new GraphQLNonNull(GraphQLString) },
     city: { type: new GraphQLNonNull(GraphQLString) },
-    place: { type: new GraphQLNonNull(GraphQLString) },
     category: { type: new GraphQLNonNull(GraphQLString) },
     description: { type: GraphQLString },
-    geo: { type: GeoType }
+    place: { type: new GraphQLNonNull(PlaceType) },
   },
-  resolve: async function (_, args) {
+  resolve: async function (_, {country, city, category, description, ...args}) {
+    const countryModel = await getEss(CountryModel, country);
+    if (!countryModel) {
+      console.error("Create event! Country not found:", country);
+      return;
+    }
+
+    const cityModel = await getEss(CityModel, city);
+    if (!cityModel) {
+      console.error("Create event! City not found:", country);
+      return;
+    }
+
+    const categoryModel = await getEss(CategoryModel, category);
+    if (!categoryModel) {
+      console.error("Create event! Category not found:", category);
+      return;
+    }
+
+    console.log(countryModel);
     const event = new EventModel({
+      country_id: countryModel._id,
+      city_id: cityModel._id,
+      category_id: categoryModel._id,
+      description: description || "",
       ...args
     });
+    
     const saveEvent = await event.save();
     if (!saveEvent) {
       console.error("Create:", args);
@@ -45,10 +83,9 @@ const updateEvent = {
     date: { type: GraphQLDateTime },
     country: { type: GraphQLString },
     city: { type: GraphQLString },
-    place: { type: GraphQLString },
     category: { type: GraphQLString },
     description: { type: GraphQLString },
-    geo: { type: GeoType }
+    place: { type: PlaceType },
   },
   resolve: async function (_, {id, ...args}) {
     let updateEventInfo;
