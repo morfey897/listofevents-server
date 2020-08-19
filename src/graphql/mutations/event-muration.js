@@ -16,6 +16,7 @@ const getEss = async (CoreModel, value) => {
     model = await CoreModel.findById(value);
   } else {
     model = await CoreModel.find({$or:[{ru: {$regex: value, $options: "i"}}, {en: {$regex: value, $options: "i"}}]});
+    model = model && model[0];
   }
   return model;
 } 
@@ -59,7 +60,6 @@ const createEvent = {
       return;
     }
 
-    console.log(countryModel);
     const event = new EventModel({
       country_id: countryModel._id,
       city_id: cityModel._id,

@@ -17,35 +17,31 @@ const EventType = new GraphQLObjectType({
     fields: () => ({
         _id: {type: GraphQLID},
         date: {type: GraphQLDateTime},
-        
-        country_id: {type: GraphQLString},
-        city_id: {type: GraphQLString},
-        category_id: {type: GraphQLString},
-        
-        // country: {
-        //   type: CountryType,
-        //   resolve: async function(_) {
-        //     let country = await CountryModel.findById(_.country_id);
-        //     return country;
-        //   }
-        // },
-        // city: {
-        //   type: CityType,
-        //   resolve: async function(_) {
-        //     let city = await CityModel.findById(_.city_id);
-        //     return city;
-        //   }
-        // },
-        // category: {
-        //   type: CategoryType,
-        //   resolve: async function(_) {
-        //     let category = await CategoryModel.findById(_.category_id);
-        //     return category;
-        //   }
-        // },
+        country: {
+          type: CountryType,
+          resolve: async function(_) {
+            let country = await CountryModel.findById(_.country_id);
+            return country;
+          }
+        },
+        city: {
+          type: CityType,
+          resolve: async function(_) {
+            let city = await CityModel.findById(_.city_id);
+            return city;
+          }
+        },
+        category: {
+          type: CategoryType,
+          resolve: async function(_) {
+            let category = await CategoryModel.findById(_.category_id);
+            return category;
+          }
+        },
 
         description: {type: GraphQLString},
-        place: {type: new GraphQLObjectType({
+        place: {
+          type: new GraphQLObjectType({
           name: "GEOType",
           description: "geo position",
           fields: () => ({

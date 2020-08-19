@@ -41,17 +41,17 @@ const getEvents = {
   type: new GraphQLList(EventType),
   description: "List of all events",
   args: {
-    filter: { type: new GraphQLNonNull(FilterType) },
+    filter: { type: FilterType },
     sortBy: { type: GraphQLInt },
     paginate: { type: PaginateType }
   },
-  resolve: async function (_, { filter: { country, city, place, category, date }, sortBy, paginate }) {
-    const fCountry = filterMap(country, "country");
-    const fCity = filterMap(city, "city");
-    const fPlace = filterMap(place, "place");
-    const fCategory = filterMap(category, "category");
-    const dateFrom = date && date[0];
-    const dateTo = date && date[1];
+  resolve: async function (_, { filter, sortBy, paginate }) {
+    const fCountry = filterMap(filter && filter.country, "country");
+    const fCity = filterMap(filter && filter.city, "city");
+    const fPlace = filterMap(filter && filter.place, "place");
+    const fCategory = filterMap(filter && filter.category, "category");
+    const dateFrom = filter && filter.date && filter.date[0];
+    const dateTo = filter && filter.date && filter.date[1];
 
     const fMong = [];
     fCountry.length && fMong.push({ $or: fCountry });
