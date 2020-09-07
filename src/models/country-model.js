@@ -1,12 +1,17 @@
 const mongoose = require("mongoose")
+const { LANGS } = require("../config");
+const { array2Obj } = require("../utils/array-utill");
 
 const Schema = mongoose.Schema
 
 const countrySchema = new Schema(
   {
-    ru: Schema.Types.String,
-    en: Schema.Types.String,
+    name: array2Obj(LANGS, Schema.Types.String),
+    coords: {
+      lat: Schema.Types.Number,
+      lon: Schema.Types.Number,
+    },
   }
 )
 
-module.exports = mongoose.model("Country", countrySchema)
+module.exports = mongoose.model("Country", countrySchema);

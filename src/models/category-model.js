@@ -1,11 +1,16 @@
 const mongoose = require("mongoose")
+const { LANGS } = require("../config");
+const { array2Obj } = require("../utils/array-utill");
 
 const Schema = mongoose.Schema
 
 const categorySchema = new Schema(
   {
-    ru: Schema.Types.String,
-    en: Schema.Types.String,
+    url: Schema.Types.String,
+    name: array2Obj(LANGS, Schema.Types.String),
+    description: array2Obj(LANGS, Schema.Types.String),
+    images_id: [Schema.Types.ObjectId],
+    tags_id: [Schema.Types.ObjectId],
   }
 )
 

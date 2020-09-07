@@ -1,15 +1,18 @@
 
-const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLFloat } = require('graphql');
+const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLFloat, GraphQLList } = require('graphql');
 const { GraphQLDateTime } = require('graphql-iso-date');
-
-const CountryType = require('./country-type');
-const CountryModel = require('../../models/country-model');
 
 const CityType = require('./city-type');
 const CityModel = require('../../models/city-model');
 
 const CategoryType = require('./category-type');
 const CategoryModel = require('../../models/category-model');
+const TranslateType = require('./translate-type');
+const TagType = require('./tag-type');
+const ImageType = require('./image-type');
+const CoordsType = require('./coords-type');
+const CountryType = require('./country-type');
+const countryModel = require('../../models/country-model');
 
 const EventType = new GraphQLObjectType({
     name: 'EventType',
@@ -17,18 +20,23 @@ const EventType = new GraphQLObjectType({
     fields: () => ({
         _id: {type: GraphQLID},
         date: {type: GraphQLDateTime},
-        country: {
-          type: CountryType,
+        url: {type: GraphQLString},
+        name: {type: TranslateType},
+        description: {type: TranslateType},
+        place: {type: TranslateType},
+        coords: {type: CoordsType},
+        tags: {
+          type: new GraphQLList(TagType),
           resolve: async function(_) {
-            let country = await CountryModel.findById(_.country_id);
-            return country;
+            let list = await TagType.find({'_id': { $in: _.tags_id}});
+            return list;
           }
         },
-        city: {
-          type: CityType,
+        images: {
+          type: new GraphQLList(ImageType),
           resolve: async function(_) {
-            let city = await CityModel.findById(_.city_id);
-            return city;
+            let list = await ImageType.find({'_id': { $in: _.images_id}});
+            return list;
           }
         },
         category: {
@@ -38,19 +46,20 @@ const EventType = new GraphQLObjectType({
             return category;
           }
         },
-
-        description: {type: GraphQLString},
-        place: {
-          type: new GraphQLObjectType({
-          name: "GEOType",
-          description: "geo position",
-          fields: () => ({
-            name: {type: GraphQLString},
-            lat: {type: GraphQLFloat},
-            lon: {type: GraphQLFloat},
-          })
-        })
-        }
+        city: {
+          type: CityType,
+          resolve: async function(_) {
+            let city = await CityModel.findById(_.city_id);
+            return city;
+          }
+        },
+        country: {
+          type: CountryType,
+          resolve: async function(_) {
+            let country = await countryModel.findById(_.country_id);
+            return country;
+          }
+        },
     })
 });
 

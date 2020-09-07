@@ -1,23 +1,21 @@
-const { GraphQLString, GraphQLID, GraphQLNonNull } = require('graphql')
+const { GraphQLString, GraphQLID, GraphQLFloat, GraphQLInputObjectType } = require('graphql')
 
 const CountryModel = require('../../models/country-model');
 const CountryType = require('../types/country-type');
+const TranslateInputType = require('../inputs/translate-input-type');
+const CoordsInputType = require('../inputs/coords-input-type');
 
-const { isValidId, jsUcfirst } = require('../../utils/validation-utill');
+const { isValidId, jsLowerCase, inlineArgs } = require('../../utils/validation-utill');
 
 const createCountry = {
   type: CountryType,
   args: {
-    ru: { type: new GraphQLNonNull(GraphQLString) },
-    en: { type: new GraphQLNonNull(GraphQLString) },
+    name: { type: TranslateInputType },
+    coords: { type: CoordsInputType },
   },
   resolve: async function (_, args) {
-    Object.keys(args).forEach(name => {
-      args[name] = jsUcfirst(args[name]);
-    });
-
-    let countryModel = await (new CountryModel(args)).save();
-    return countryModel;
+    let oneModel = await (new CountryModel(jsLowerCase(args, {name: true}))).save();
+    return oneModel;
   }
 }
 
@@ -25,22 +23,13 @@ const updateCountry = {
   type: CountryType,
   args: {
     id: {type: GraphQLID},
-    ru: { type: GraphQLString },
-    en: { type: GraphQLString }
+    name: { type: TranslateInputType },
+    coords: { type: CoordsInputType },
   },
   resolve: async function (_, {id, ...args}) {
     let updateCountryInfo;
     if (isValidId(id)) {
-      Object.keys(args).forEach(name => {
-        let value = jsUcfirst(args[name]);
-        if (!value) {
-          delete args[name];
-        } else {
-          args[name] = value;
-        }
-      });
-  
-      updateCountryInfo = await CountryModel.findByIdAndUpdate(id, args, { new: true });
+      updateCountryInfo = await CountryModel.findOneAndUpdate({_id: id}, {$set: inlineArgs(jsLowerCase(args, {name: true}))}, { new: true });
     }
     
     if (!updateCountryInfo) {
@@ -56,14 +45,14 @@ const deleteCountry = {
     id: { type: GraphQLID }
   },
   resolve: async function (_, {id}) {
-    let deleteCountry;
+    let deleteInfo;
     if (isValidId(id)) {
-      deleteCountry = await CountryModel.findByIdAndRemove(id);
+      deleteInfo = await CountryModel.findByIdAndRemove(id);
     }
-    if (!deleteCountry) {
+    if (!deleteInfo) {
       console.error("Delete country:", id);
     }
-    return deleteCountry;
+    return deleteInfo;
   }
 }
 
