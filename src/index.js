@@ -17,7 +17,6 @@ app.use(
   "/graphql",
   graphqlHTTP({
     schema: AppSchema,
-    // rootValue,
     graphiql: true,
   })
 );

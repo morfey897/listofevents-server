@@ -4,29 +4,34 @@ const jsUcfirst = (value) => {
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
 };
 
-const jsLowerCase = (args, filter) => {
+const _jsStringPrepare = (args, filter, func) => {
 
-  const isArray = filter && Array.isArray(filter) && filter.length > 0;
+  const isFilterArray = filter && Array.isArray(filter) && filter.length > 0;
   const out = {};
   for (let name in args) {
     let value = args[name];
-
-    if (typeof value === "object") {
-      value = Object.assign({}, value);
-      out[name] = value;
-      if (!filter || (isArray && filter.indexOf(name) != -1) || (!isArray && filter[name] == true)) {
+    if (!filter || (isFilterArray && filter.indexOf(name) != -1) || (!isFilterArray && filter[name] == true)) {
+      console.log(name, value, typeof value);
+      if (typeof value === "object") {
+        out[name] = {};
         for (let code in value) {
           let val = value[code];
-          value[code] = typeof val === "string" ? val.toLowerCase() : val;
-        }
+          out[name][code] = typeof val === "string" ? func(val) : val;
+        }  
+      } else if (typeof value === "string") {
+        out[name] = func(value);  
+      } else {
+        out[name] = value;  
       }
     } else {
-      out[name] = (!filter || (isArray && filter.indexOf(name) != -1) || (!isArray && filter[name] == true)) && typeof value === "string" ? value.toLowerCase() : value;
+      out[name] = value;
     }
-    
   }
   return out;
 };
+
+const jsLowerCase = (args, filter) => console.log('LOWER_CASE') || _jsStringPrepare(args, filter, (str) => str.toLowerCase());
+const jsTrim = (args, filter) => console.log('TRIM') || _jsStringPrepare(args, filter, (str) => str.trim());
 
 const inlineArgs = (args) => {
   const mutateArgs = {};
@@ -52,5 +57,6 @@ module.exports = {
   isValidId,
   jsUcfirst,
   jsLowerCase,
+  jsTrim,
   inlineArgs,
 };

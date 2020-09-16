@@ -6,6 +6,7 @@ const Schema = mongoose.Schema
 
 const countrySchema = new Schema(
   {
+    iso_code: Schema.Types.String,
     name: array2Obj(LANGS, Schema.Types.String),
     coords: {
       lat: Schema.Types.Number,

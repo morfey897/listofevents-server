@@ -1,46 +1,34 @@
-const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLInputObjectType } = require('graphql')
+const { GraphQLString, GraphQLID, GraphQLNonNull } = require('graphql')
 
 const CityModel = require('../../models/city-model');
 const CityType = require('../types/city-type');
 
-const { isValidId, jsLowerCase, inlineArgs } = require('../../utils/validation-utill');
+const { isValidId, jsLowerCase, inlineArgs, jsTrim } = require('../../utils/validation-utill');
 const CountryModel = require('../../models/country-model');
 const TranslateInputType = require('../inputs/translate-input-type');
 const CoordsInputType = require('../inputs/coords-input-type');
 
-const CountryCityInputType = new GraphQLInputObjectType({
-  name: "CountryCityInputType",
-  fields: () => ({
-    name: { type: new GraphQLNonNull(TranslateInputType) },
-    coords: { type: CoordsInputType },
-  })
-});
-
+const _prepareArgs = (args, filter) => jsLowerCase(jsTrim(args, filter), filter);
 
 const createCity = {
   type: CityType,
   args: {
-    country_id: { type: GraphQLString},
-    country: { type: CountryCityInputType},
-
-    name: { type: TranslateInputType },
+    country: { type: new GraphQLNonNull(GraphQLString) },
+    name: { type: new GraphQLNonNull(TranslateInputType) },
     coords: { type: CoordsInputType },
   },
   resolve: async function (_, args) {
-    let countryModel;
 
-    if ((args.country_id || !isValidId(args.country_id)) && args.country) {
-      countryModel = await (new CountryModel(jsLowerCase(args.country, {name: true}))).save();
-    } else {
-      countryModel = await CountryModel.findOne({_id: args.country_id});
-    }
+    const country = args.country.trim();
+    const countryModel = await CountryModel.findOne(isValidId(country) ? { _id: country } : { $or: [{ iso_code: { $regex: country, $options: "i" } }, { 'name.ru': { $regex: country, $options: "i" } }, { 'name.en': { $regex: country, $options: "i" } }] });
+
     if (!countryModel) {
       console.warn('Country not found:', args);
       return;
     }
-    delete args.country;
-    args.country_id = countryModel._id;
-    let oneModel = await (new CityModel(jsLowerCase(args, {name: true}))).save();
+
+    args = Object.assign({}, args, { country_id: countryModel._id.toString() });
+    let oneModel = await (new CityModel(_prepareArgs(args, { name: true }))).save();
     return oneModel;
   }
 }
@@ -48,25 +36,25 @@ const createCity = {
 const updateCity = {
   type: CityType,
   args: {
-    id: {type: GraphQLID},
-    country_id: { type: GraphQLString},
+    id: { type: GraphQLID },
+    country: { type: GraphQLString },
     name: { type: TranslateInputType },
     coords: { type: CoordsInputType },
   },
-  resolve: async function (_, {id, ...args}) {
+  resolve: async function (_, { id, ...args }) {
     let updateCityInfo;
     if (isValidId(id)) {
 
-      if (args.country_id) {
-        let countryModel = await CountryModel.findOne({_id: args.country_id});
-        if (!countryModel) {
-          delete args.country_id;
+      if (args.country) {
+        const country = args.country.trim();
+        const countryModel = await CountryModel.findOne(isValidId(country) ? { _id: country } : { $or: [{ iso_code: { $regex: country, $options: "i" } }, { 'name.ru': { $regex: country, $options: "i" } }, { 'name.en': { $regex: country, $options: "i" } }] });
+        if (countryModel) {
+          args = Object.assign({}, args, { country_id: countryModel._id.toString() });
         }
       }
-      
-      updateCityInfo = await CityModel.findOneAndUpdate({_id: id}, {$set: inlineArgs(jsLowerCase(args, {name: true}))}, { new: true });
+      updateCityInfo = await CityModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(_prepareArgs(args, { name: true })) }, { new: true });
     }
-    
+
     if (!updateCityInfo) {
       console.warn('Update city:', id, args);
     }
@@ -79,7 +67,7 @@ const deleteCity = {
   args: {
     id: { type: GraphQLID }
   },
-  resolve: async function (_, {id}) {
+  resolve: async function (_, { id }) {
     let deleteCity;
     if (isValidId(id)) {
       deleteCity = await CityModel.findByIdAndRemove(id);

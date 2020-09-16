@@ -1,20 +1,23 @@
-const { GraphQLString, GraphQLID, GraphQLFloat, GraphQLInputObjectType } = require('graphql')
+const { GraphQLID, GraphQLString, GraphQLNonNull } = require('graphql')
 
 const CountryModel = require('../../models/country-model');
 const CountryType = require('../types/country-type');
 const TranslateInputType = require('../inputs/translate-input-type');
 const CoordsInputType = require('../inputs/coords-input-type');
 
-const { isValidId, jsLowerCase, inlineArgs } = require('../../utils/validation-utill');
+const { isValidId, jsLowerCase, jsTrim, inlineArgs } = require('../../utils/validation-utill');
+
+const _prepareArgs = (args, filter) => jsLowerCase(jsTrim(args, filter), filter);
 
 const createCountry = {
   type: CountryType,
   args: {
-    name: { type: TranslateInputType },
+    iso_code: { type: new GraphQLNonNull(GraphQLString) },
+    name: { type: new GraphQLNonNull(TranslateInputType) },
     coords: { type: CoordsInputType },
   },
   resolve: async function (_, args) {
-    let oneModel = await (new CountryModel(jsLowerCase(args, {name: true}))).save();
+    let oneModel = await (new CountryModel(_prepareArgs(args, {name: true, iso_code: true}))).save();
     return oneModel;
   }
 }
@@ -23,13 +26,14 @@ const updateCountry = {
   type: CountryType,
   args: {
     id: {type: GraphQLID},
+    iso_code: { type: GraphQLString },
     name: { type: TranslateInputType },
     coords: { type: CoordsInputType },
   },
   resolve: async function (_, {id, ...args}) {
     let updateCountryInfo;
     if (isValidId(id)) {
-      updateCountryInfo = await CountryModel.findOneAndUpdate({_id: id}, {$set: inlineArgs(jsLowerCase(args, {name: true}))}, { new: true });
+      updateCountryInfo = await CountryModel.findOneAndUpdate({_id: id}, {$set: inlineArgs(_prepareArgs(args, {name: true, iso_code: true}))}, { new: true });
     }
     
     if (!updateCountryInfo) {

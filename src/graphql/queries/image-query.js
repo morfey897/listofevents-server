@@ -1,4 +1,4 @@
-const { GraphQLList, GraphQLID, GraphQLString, GraphQLInt } = require('graphql');
+const { GraphQLList, GraphQLID } = require('graphql');
 const { isValidId } = require('../../utils/validation-utill');
 
 const ImageModel = require('../../models/image-model');
