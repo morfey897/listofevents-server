@@ -1,4 +1,4 @@
-const { GraphQLList, GraphQLID, GraphQLInt } = require('graphql');
+const { GraphQLList, GraphQLID } = require('graphql');
 
 const CategoryModel = require('../../models/category-model');
 const CategoryType = require('../types/category-type');
@@ -8,6 +8,11 @@ const PaginateType = require('../types/paginate-type');
 const { filterField } = require('../../utils/filter-utill');
 
 const MAX_SIZE = 100;
+
+const findCategory = async (category) => {
+  const categoryModel = await CategoryModel.findOne(isValidId(category) ? { _id: category } : { $or: filterField(category, ['name'])});
+  return categoryModel;
+}
 
 const getCategory = {
   type: CategoryType,
@@ -30,13 +35,13 @@ const getCategory = {
 const getCategories = {
   type: new GraphQLList(CategoryType),
   description: "List of all categories",
-  args: { 
-    filter: {type: FilterType},
+  args: {
+    filter: { type: FilterType },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const {filter, paginate} = args || {};
-    
+    const { filter, paginate } = args || {};
+
     const filterFields = filter && filter.fields || [];
     const filterToken = filter && filter.token || "";
     if (filterToken && !filterFields.length) {
@@ -45,7 +50,7 @@ const getCategories = {
 
     let list = await CategoryModel.find(
       filterToken ? { $or: filterField(filterToken, filterFields) } : {},
-      )
+    )
       .skip(paginate && paginate.offset || 0)
       .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE));
     return list;
@@ -53,6 +58,9 @@ const getCategories = {
 }
 
 module.exports = {
-  getCategory,
-  getCategories,
+  graphql: {
+    getCategory,
+    getCategories,
+  },
+  findCategory
 };

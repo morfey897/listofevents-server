@@ -4,7 +4,6 @@ const { GraphQLDateTime } = require('graphql-iso-date');
 const EventModel = require('../../models/event-model');
 const EventType = require('../types/event-type');
 
-const { filterMap } = require("../../utils/filter-utill");
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
 
@@ -15,9 +14,9 @@ const FilterEventType = new GraphQLInputObjectType({
   fields: () => ({
     dateFrom: { type: GraphQLDateTime },
     dateTo: { type: GraphQLDateTime },
-    countries_id: { type: new GraphQLList(GraphQLString) },
     cities_id: { type: new GraphQLList(GraphQLString) },
     categories_id: { type: new GraphQLList(GraphQLString) },
+    tags_id: { type: new GraphQLList(GraphQLString) },
   })
 });
 
@@ -49,22 +48,24 @@ const getEvents = {
   },
   resolve: async function (_, args) {
     const { filter, sortBy, paginate } = args || {};
-    const fCountry = filter && filter.countries_id;
-    const fCity = filter && filter.cities_id;
-    const fCategory = filter && filter.categories_id;
+    const filterCityId = filter && filter.cities_id || [];
+    const filterCategoryId = filter && filter.categories_id || [];
+    const filterTagId = filter && filter.tags_id || [];
+
     const dateFrom = filter && filter.dateFrom;
     const dateTo = filter && filter.dateTo;
 
-    const fMong = [];
-    fCountry && fCountry.length && fMong.push({ $or: fCountry });
-    fCity && fCity.length && fMong.push({ $or: fCity });
-    fCategory && fCategory.length && fMong.push({ $or: fCategory });
-    dateFrom && fMong.push({ date: { $gte: dateFrom } });
-    dateTo && fMong.push({ date: { $lte: dateTo } });
-    
+    const filterObj = [];
+    dateFrom && filterObj.push({ date: { $gte: dateFrom } });
+    dateTo && filterObj.push({ date: { $lte: dateTo } });
+
+    filterCityId.length && filterObj.push({ city_id: {$in: filterCityId} });
+    filterCategoryId.length && filterObj.push({ category_id: {$in: filterCategoryId} });
+    filterTagId.length && filterObj.push({ tags_id: {$in: filterTagId} });
+
     let skip = paginate && paginate.offset || 0;
     let limit = paginate && paginate.limit;
-    
+
     if (dateFrom && dateTo) {
       limit = limit || Number.MAX_SAFE_INTEGER;
     } else {
@@ -72,7 +73,7 @@ const getEvents = {
     }
 
     let events = await EventModel.find(
-      fMong.length ? { $and: fMong } : {},
+      filterObj.length ? { $and: filterObj } : {},
       null,
       {
         sort: { date: sortBy > 0 ? 1 : (sortBy < 0 ? -1 : 0) }
@@ -84,6 +85,8 @@ const getEvents = {
 }
 
 module.exports = {
-  getEvent,
-  getEvents,
+  graphql: {
+    getEvent,
+    getEvents,
+  }
 };

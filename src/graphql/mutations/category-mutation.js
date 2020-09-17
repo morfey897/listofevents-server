@@ -1,22 +1,42 @@
-const { GraphQLString, GraphQLID, GraphQLNonNull } = require('graphql')
+const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat } = require('graphql')
+const shortid = require('shortid');
 
 const CategoryModel = require('../../models/category-model');
 const CategoryType = require('../types/category-type');
 
-const { isValidId } = require('../../utils/validation-utill');
+const { addTags } = require('../mutations/tag-mutation');
+
+const { isValidId, jsTrim, isValidUrl, inlineArgs } = require('../../utils/validation-utill');
+const TranslateInputType = require('../inputs/translate-input-type');
 
 const createCategory = {
   type: CategoryType,
   args: {
-    ru: { type: new GraphQLNonNull(GraphQLString) },
-    en: { type: new GraphQLNonNull(GraphQLString) },
+    url: { type: new GraphQLNonNull(GraphQLString) },
+    name: { type: new GraphQLNonNull(TranslateInputType) },
+    description: { type: new GraphQLNonNull(TranslateInputType) },
+    tags: { type: new GraphQLList(GraphQLString) },
+    // images: { type: new GraphQLList(GraphQLString) },
   },
-  resolve: async function (_, args) {
-    Object.keys(args).forEach(name => {
-      args[name] = (args[name] || "").trim();
-    });
+  resolve: async function (_, {tags, ...args}) {
+    let categoryModel;
+    if (isValidUrl(args.url)) {
 
-    let categoryModel = await (new CategoryModel(args)).save();
+      args.url += "-" + shortid.generate();
+
+      tags = await addTags(tags);
+
+      categoryModel = await (new CategoryModel({
+        tags_id: tags,
+        images_id: [],
+        ...jsTrim(args, {name: true, url: true})
+      })).save();
+    }
+    
+    if (!categoryModel) {
+      console.warn('Create category:', tags, args);
+    }
+
     return categoryModel;
   }
 }
@@ -25,22 +45,26 @@ const updateCategory = {
   type: CategoryType,
   args: {
     id: {type: GraphQLID},
-    ru: { type: GraphQLString },
-    en: { type: GraphQLString }
+    url: { type: GraphQLString },
+    name: { type: TranslateInputType },
+    description: { type: TranslateInputType },
+    tags: { type: new GraphQLList(GraphQLString) },
+    // images: { type: new GraphQLList(GraphQLString) },
   },
-  resolve: async function (_, {id, ...args}) {
+  resolve: async function (_, {id, tags, ...args}) {
     let updateCategoryInfo;
     if (isValidId(id)) {
-      Object.keys(args).forEach(name => {
-        let value = (args[name] || "").trim();
-        if (!value) {
-          delete args[name];
-        } else {
-          args[name] = value;
-        }
-      });
-  
-      updateCategoryInfo = await CategoryModel.findByIdAndUpdate(id, args, { new: true });
+      if (tags && tags.length) {
+        tags = await addTags(tags);
+      }
+
+      if (!isValidUrl(args.url)) {
+        args.url = "";
+      } else {
+        args.url += "-" + shortid.generate();
+      }
+
+      updateCategoryInfo = await CategoryModel.findOneAndUpdate({_id: id}, { $set: inlineArgs(jsTrim({tags_id: tags, ...args}, { name: true, url: true })) }, { new: true });
     }
     
     if (!updateCategoryInfo) {
@@ -50,21 +74,21 @@ const updateCategory = {
   }
 }
 
-const deleteCategory = {
-  type: CategoryType,
+const deleteCategories = {
+  type: GraphQLFloat,
   args: {
-    id: { type: GraphQLID }
+    ids: { type: new GraphQLList(GraphQLID) }
   },
-  resolve: async function (_, {id}) {
-    let deleteCategory;
-    if (isValidId(id)) {
-      deleteCategory = await CategoryModel.findByIdAndRemove(id);
+  resolve: async function (_, {ids}) {
+    if (ids) {
+      ids = ids.filter(id => isValidId(id));
+      if (ids.length) {
+        let deleteInfo = await CategoryModel.remove({_id: {$in: ids}});
+        return deleteInfo.deletedCount;
+      }
     }
-    if (!deleteCategory) {
-      console.error("Delete category:", id);
-    }
-    return deleteCategory;
+    return 0;
   }
 }
 
-module.exports = { createCategory, updateCategory, deleteCategory }
+module.exports = { graphql: {createCategory, updateCategory, deleteCategories} }

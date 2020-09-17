@@ -5,9 +5,7 @@ const CountryType = require('../types/country-type');
 const TranslateInputType = require('../inputs/translate-input-type');
 const CoordsInputType = require('../inputs/coords-input-type');
 
-const { isValidId, jsLowerCase, jsTrim, inlineArgs } = require('../../utils/validation-utill');
-
-const _prepareArgs = (args, filter) => jsLowerCase(jsTrim(args, filter), filter);
+const { isValidId, jsTrim, inlineArgs } = require('../../utils/validation-utill');
 
 const createCountry = {
   type: CountryType,
@@ -17,7 +15,7 @@ const createCountry = {
     coords: { type: CoordsInputType },
   },
   resolve: async function (_, args) {
-    let oneModel = await (new CountryModel(_prepareArgs(args, {name: true, iso_code: true}))).save();
+    let oneModel = await (new CountryModel(jsTrim(args, {name: true, iso_code: true}))).save();
     return oneModel;
   }
 }
@@ -33,7 +31,7 @@ const updateCountry = {
   resolve: async function (_, {id, ...args}) {
     let updateCountryInfo;
     if (isValidId(id)) {
-      updateCountryInfo = await CountryModel.findOneAndUpdate({_id: id}, {$set: inlineArgs(_prepareArgs(args, {name: true, iso_code: true}))}, { new: true });
+      updateCountryInfo = await CountryModel.findOneAndUpdate({_id: id}, {$set: inlineArgs(jsTrim(args, {name: true, iso_code: true}))}, { new: true });
     }
     
     if (!updateCountryInfo) {
@@ -60,4 +58,4 @@ const deleteCountry = {
   }
 }
 
-module.exports = { createCountry, updateCountry, deleteCountry }
+module.exports = { graphql: {createCountry, updateCountry, deleteCountry} }

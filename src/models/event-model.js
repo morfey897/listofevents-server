@@ -4,8 +4,6 @@ const { array2Obj } = require("../utils/array-utill");
 
 const Schema = mongoose.Schema;
 
-// console.log("EVENT", ;
-
 const eventSchema = new Schema(
   {
     date: Schema.Types.Date,
@@ -16,7 +14,6 @@ const eventSchema = new Schema(
     tags_id: [Schema.Types.ObjectId],
 
     city_id: Schema.Types.ObjectId,
-    country_id: Schema.Types.ObjectId,
     category_id: Schema.Types.ObjectId,
     place: array2Obj(LANGS, Schema.Types.String),
     coords: {

@@ -1,5 +1,5 @@
 
-const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLFloat, GraphQLList } = require('graphql');
+const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLList } = require('graphql');
 const { GraphQLDateTime } = require('graphql-iso-date');
 
 const CityType = require('./city-type');
@@ -11,8 +11,6 @@ const TranslateType = require('./translate-type');
 const TagType = require('./tag-type');
 const ImageType = require('./image-type');
 const CoordsType = require('./coords-type');
-const CountryType = require('./country-type');
-const countryModel = require('../../models/country-model');
 
 const EventType = new GraphQLObjectType({
     name: 'EventType',
@@ -51,13 +49,6 @@ const EventType = new GraphQLObjectType({
           resolve: async function(_) {
             let city = await CityModel.findById(_.city_id);
             return city;
-          }
-        },
-        country: {
-          type: CountryType,
-          resolve: async function(_) {
-            let country = await countryModel.findById(_.country_id);
-            return country;
           }
         },
     })

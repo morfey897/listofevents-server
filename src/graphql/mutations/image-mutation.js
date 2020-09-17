@@ -1,4 +1,4 @@
-const { GraphQLString, GraphQLID, GraphQLNonNull } = require('graphql')
+const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat } = require('graphql')
 
 const ImageModel = require('../../models/image-model');
 const ImageType = require('../types/image-type');
@@ -44,21 +44,21 @@ const updateImage = {
   }
 }
 
-const deleteImage = {
-  type: ImageType,
+const deleteImages = {
+  type: GraphQLFloat,
   args: {
-    id: { type: GraphQLID }
+    ids: { type: new GraphQLList(GraphQLID) }
   },
-  resolve: async function (_, {id}) {
-    let deleteInfo;
-    if (isValidId(id)) {
-      deleteInfo = await ImageModel.findByIdAndRemove(id);
+  resolve: async function (_, {ids}) {
+    if (ids) {
+      ids = ids.filter(id => isValidId(id));
+      if (ids.length) {
+        let deleteInfo = await ImageModel.remove({_id: {$in: ids}});
+        return deleteInfo.deletedCount;
+      }
     }
-    if (!deleteInfo) {
-      console.error("Delete image:", id);
-    }
-    return deleteInfo;
+    return 0;
   }
 }
 
-module.exports = { createImage, updateImage, deleteImage }
+module.exports = { graphql: {createImage, updateImage, deleteImages} }

@@ -1,4 +1,7 @@
 const isValidId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
+const isValidTag = (tag) => tag && /^\s*#\w+\s*$/.test(tag);
+const isValidUrl = (url) => url && /^\s*\/[a-z][\w-]{2,}[a-z0-9]\s*$/.test(url);
+
 const jsUcfirst = (value) => {
   value = (value || "").trim();
   return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
@@ -11,7 +14,6 @@ const _jsStringPrepare = (args, filter, func) => {
   for (let name in args) {
     let value = args[name];
     if (!filter || (isFilterArray && filter.indexOf(name) != -1) || (!isFilterArray && filter[name] == true)) {
-      console.log(name, value, typeof value);
       if (typeof value === "object") {
         out[name] = {};
         for (let code in value) {
@@ -30,33 +32,31 @@ const _jsStringPrepare = (args, filter, func) => {
   return out;
 };
 
-const jsLowerCase = (args, filter) => console.log('LOWER_CASE') || _jsStringPrepare(args, filter, (str) => str.toLowerCase());
-const jsTrim = (args, filter) => console.log('TRIM') || _jsStringPrepare(args, filter, (str) => str.trim());
-
-const inlineArgs = (args) => {
-  const mutateArgs = {};
+const _mutateArgs = (args, preffix, to) => {
   for (let name in args) {
     let value = args[name];
     if (typeof value === "object") {
-      for (let code in value) {
-        let val = value[code];
-        if (val !== "" && val !== undefined && val != null) {
-          mutateArgs[`${name}.${code}`] = val;
-        }
-      }
+      _mutateArgs(value, preffix.concat(name), to);
     } else {
       if (value !== "" && value !== undefined && value != null) {
-        mutateArgs[name] = value;
+        to[preffix.concat(name).join('.')] = value;
       }
     }
   }
-  return mutateArgs;
-}
+  return to;
+};
+
+const jsTrim = (args, filter) => {
+  if (typeof args === "string") return args.trim();
+  return _jsStringPrepare(args, filter, (str) => str.trim());
+};
+const inlineArgs = (args) => _mutateArgs(args, [], {});
 
 module.exports = {
   isValidId,
+  isValidTag,
+  isValidUrl,
   jsUcfirst,
-  jsLowerCase,
   jsTrim,
   inlineArgs,
 };

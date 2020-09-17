@@ -6,10 +6,10 @@ const TagQuery = require('./tag-query');
 const ImageQuery = require('./image-query');
 
 module.exports = {
-  ...EventQuery,
-  ...CategoryQuery,
-  ...CountryQuery,
-  ...CityQuery,
-  ...TagQuery,
-  ...ImageQuery,
+  ...EventQuery.graphql,
+  ...CategoryQuery.graphql,
+  ...CountryQuery.graphql,
+  ...CityQuery.graphql,
+  ...TagQuery.graphql,
+  ...ImageQuery.graphql,
 };

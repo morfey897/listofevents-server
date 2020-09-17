@@ -1,8 +1,12 @@
 
-const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLInt, GraphQLList } = require('graphql');
+const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLList } = require('graphql');
 const TranslateType = require('./translate-type');
+
 const TagType = require('./tag-type');
+const TagModel = require('../../models/tag-model');
+
 const ImageType = require('./image-type');
+const ImageModel = require('../../models/image-model');
 
 const CategoryType = new GraphQLObjectType({
   name: 'CategoryType',
@@ -15,14 +19,14 @@ const CategoryType = new GraphQLObjectType({
     tags: {
       type: new GraphQLList(TagType),
       resolve: async function(_) {
-        let list = await TagType.find({'_id': { $in: _.tags_id}});
+        let list = await TagModel.find({'_id': { $in: _.tags_id}});
         return list;
       }
     },
     images: {
       type: new GraphQLList(ImageType),
       resolve: async function(_) {
-        let list = await ImageType.find({'_id': { $in: _.images_id}});
+        let list = await ImageModel.find({'_id': { $in: _.images_id}});
         return list;
       }
     }

@@ -30,21 +30,21 @@ const getTags = {
   type: new GraphQLList(TagType),
   description: "List of all tags",
   args: {
-    filter: {type: FilterType},
+    filter: { type: FilterType },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const {filter, paginate} = args || {};
+    const { filter, paginate } = args || {};
 
     const filterFields = filter && filter.fields || [];
     const filterToken = filter && filter.token || "";
     if (filterToken && !filterFields.length) {
       filterFields.push("label");
     }
-    
+
     let list = await TagModel.find(
-      filterToken ? { $or: filterFields.map((f) => ({[f]: {$regex: filter.token, $options: "i"}})) } : {},
-      )
+      filterToken ? { $or: filterFields.map((f) => ({ [f]: { $regex: filter.token, $options: "i" } })) } : {},
+    )
       .skip(paginate && paginate.offset || 0)
       .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE));
 
@@ -53,6 +53,8 @@ const getTags = {
 }
 
 module.exports = {
-  getTag,
-  getTags
+  graphql: {
+    getTag,
+    getTags,
+  }
 };

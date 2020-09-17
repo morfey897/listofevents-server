@@ -30,11 +30,11 @@ const getImages = {
   type: new GraphQLList(ImageType),
   description: "List of all images",
   args: {
-    filter: {type: FilterType},
+    filter: { type: FilterType },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const {filter, paginate} = args || {};
+    const { filter, paginate } = args || {};
 
     const filterFields = filter && filter.fields || [];
     const filterToken = filter && filter.token || "";
@@ -43,8 +43,8 @@ const getImages = {
     }
 
     let list = await ImageModel.find(
-      filterToken ? { $or: filterFields.map((f) => ({[f]: {$regex: filter.token, $options: "i"}})) } : {},
-      )
+      filterToken ? { $or: filterFields.map((f) => ({ [f]: { $regex: filter.token, $options: "i" } })) } : {},
+    )
       .skip(paginate && paginate.offset || 0)
       .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE));
     return list;
@@ -52,6 +52,8 @@ const getImages = {
 }
 
 module.exports = {
-  getImage,
-  getImages
+  graphql: {
+    getImage,
+    getImages,
+  }
 };

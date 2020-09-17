@@ -6,10 +6,10 @@ const TagMutation = require('./tag-mutation');
 const ImageMutation = require('./image-mutation');
 
 module.exports = {
-  ...EventMutation,
-  ...CountryMutation,
-  ...CityMutation,
-  ...CategoryMutation,
-  ...TagMutation,
-  ...ImageMutation,
+  ...EventMutation.graphql,
+  ...CountryMutation.graphql,
+  ...CityMutation.graphql,
+  ...CategoryMutation.graphql,
+  ...TagMutation.graphql,
+  ...ImageMutation.graphql,
 };

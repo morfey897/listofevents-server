@@ -9,6 +9,11 @@ const PaginateType = require('../types/paginate-type');
 
 const MAX_SIZE = 100;
 
+const findCountry = async (country) => {
+  const countryModel = await CountryModel.findOne(isValidId(country) ? { _id: country } : { $or: filterField(country, ['iso_code', 'name']) });
+  return countryModel;
+}
+
 const getCountry = {
   type: CountryType,
   args: {
@@ -31,12 +36,12 @@ const getCountries = {
   type: new GraphQLList(CountryType),
   description: "List of all countries",
   args: {
-    filter: {type: FilterType},
+    filter: { type: FilterType },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const {filter, paginate} = args || {};
-    
+    const { filter, paginate } = args || {};
+
     const filterFields = filter && filter.fields || [];
     const filterToken = filter && filter.token || "";
     if (filterToken && !filterFields.length) {
@@ -45,7 +50,7 @@ const getCountries = {
 
     let list = await CountryModel.find(
       filterToken ? { $or: filterField(filterToken, filterFields) } : {},
-      )
+    )
       .skip(paginate && paginate.offset || 0)
       .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE));
     return list;
@@ -53,6 +58,9 @@ const getCountries = {
 }
 
 module.exports = {
-  getCountry,
-  getCountries
+  graphql: {
+    getCountry,
+    getCountries
+  },
+  findCountry,
 };

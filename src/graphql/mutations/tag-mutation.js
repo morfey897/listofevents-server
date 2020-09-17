@@ -1,18 +1,44 @@
-const { GraphQLString, GraphQLID, GraphQLNonNull } = require('graphql')
+const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat } = require('graphql')
 
 const TagModel = require('../../models/tag-model');
 const TagType = require('../types/tag-type');
 
-const { isValidId } = require('../../utils/validation-utill');
+const { isValidId, isValidTag, inlineArgs, jsTrim } = require('../../utils/validation-utill');
 
-const createTag = {
-  type: TagType,
+const addTags = async (input) => {
+  let tags = (Array.isArray(input) ? input : [input]).map(t => jsTrim(t || "")).filter(t => isValidTag(t) || isValidId(t));
+  if (tags.length) {
+    const newListTags = tags.filter(t => isValidTag(t));
+
+    const tagModels = await TagModel.find({ $or: [{ label: { $in: newListTags } }] });
+    const needCreate = newListTags.filter(t => !tagModels.find(({ label }) => label === t));
+    const newTags = await Promise.all(needCreate.map(async label => await (new TagModel({ label })).save()));
+
+    tags = tags.map(v => {
+      if (isValidId(v)) return v;
+      let newTag = tagModels.find(({ label }) => label === v) || newTags.find(({ label }) => label === v);
+      return newTag ? newTag._id.toString() : "";
+    }).filter(t => isValidId(t));
+  }
+  return tags;
+};
+
+const createTags = {
+  type: new GraphQLList(TagType),
   args: {
-    label: { type: new GraphQLNonNull(GraphQLString) },
+    labels: { type: new GraphQLList(GraphQLString) },
   },
-  resolve: async function (_, args) {
-    let one = await (new TagModel(args)).save();
-    return one;
+  resolve: async function (_, {labels}) {
+    let tags = (labels || []).map(t => jsTrim(t || "")).filter(t => isValidTag(t));
+    if (tags.length) {
+      const newListTags = tags.filter(t => isValidTag(t));
+      const tagModels = await TagModel.find({ $or: [{ label: { $in: newListTags } }] });
+      const needCreate = newListTags.filter(t => !tagModels.find(({ label }) => label === t));
+      await Promise.all(needCreate.map(async label => await (new TagModel({ label })).save()));
+    }
+
+    let list = await TagModel.find({$or: [{ label: { $in: tags } }] });
+    return list;
   }
 }
 
@@ -25,16 +51,7 @@ const updateTag = {
   resolve: async function (_, {id, ...args}) {
     let updateInfo;
     if (isValidId(id)) {
-      Object.keys(args).forEach(name => {
-        let value = args[name];
-        if (!value) {
-          delete args[name];
-        } else {
-          args[name] = value;
-        }
-      });
-  
-      updateInfo = await TagModel.findByIdAndUpdate(id, args, { new: true });
+      updateInfo = await TagModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, { label: true })) }, { new: true });
     }
     
     if (!updateInfo) {
@@ -44,21 +61,24 @@ const updateTag = {
   }
 }
 
-const deleteTag = {
-  type: TagType,
+const deleteTags = {
+  type: GraphQLFloat,
   args: {
-    id: { type: GraphQLID }
+    ids: { type: new GraphQLList(GraphQLID) }
   },
-  resolve: async function (_, {id}) {
-    let deleteInfo;
-    if (isValidId(id)) {
-      deleteInfo = await TagModel.findByIdAndRemove(id);
+  resolve: async function (_, {ids}) {
+    if (ids) {
+      ids = ids.filter(id => isValidId(id));
+      if (ids.length) {
+        let deleteInfo = await TagModel.remove({_id: {$in: ids}});
+        return deleteInfo.deletedCount;
+      }
     }
-    if (!deleteInfo) {
-      console.error("Delete tag:", id);
-    }
-    return deleteInfo;
+    return 0;
   }
 }
 
-module.exports = { createTag, updateTag, deleteTag }
+module.exports = {  
+  graphql: {createTags, updateTag, deleteTags},
+  addTags,
+}
