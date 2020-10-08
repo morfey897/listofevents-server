@@ -9,7 +9,9 @@ const CategoryType = require('./category-type');
 const CategoryModel = require('../../models/category-model');
 const TranslateType = require('./translate-type');
 const TagType = require('./tag-type');
+const TagModel = require('../../models/tag-model');
 const ImageType = require('./image-type');
+const ImageModel = require('../../models/image-model');
 const CoordsType = require('./coords-type');
 
 const EventType = new GraphQLObjectType({
@@ -26,14 +28,14 @@ const EventType = new GraphQLObjectType({
         tags: {
           type: new GraphQLList(TagType),
           resolve: async function(_) {
-            let list = await TagType.find({'_id': { $in: _.tags_id}});
+            let list = await TagModel.find({'_id': { $in: _.tags_id}});
             return list;
           }
         },
         images: {
           type: new GraphQLList(ImageType),
           resolve: async function(_) {
-            let list = await ImageType.find({'_id': { $in: _.images_id}});
+            let list = await ImageModel.find({'_id': { $in: _.images_id}});
             return list;
           }
         },
