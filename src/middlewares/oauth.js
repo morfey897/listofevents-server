@@ -5,15 +5,17 @@ function loggingMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (authHeader) {
       const [type, token] = authHeader.split(' ');
-      console.log("TOKEN", authHeader);
       if (type === "Basic" || type === "basic") {
         if (token === basicAuth) {
           next();
-          return;
+        } else {
+          res.sendStatus(401);
         }
       } else if (type === "Bearer" || type === "bearer") {
         next();
         return;
+      } else {
+        res.sendStatus(401);
       }
       // jwt.verify(token, accessTokenSecret, (err, user) => {
       //     if (err) {
@@ -22,8 +24,10 @@ function loggingMiddleware(req, res, next) {
       //     req.user = user;
       //     next();
       // });
+  } else {
+    res.set('WWW-Authenticate', 'Basic realm="401"');
+    res.status(401).send('Authentication required.');
   }
-  res.sendStatus(401);
 }
 
 module.exports = {
