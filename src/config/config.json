@@ -1,3 +1,11 @@
 {
-  "LANGS": ["ru", "en"]
+  "LANGS": ["ru", "en"],
+  "ROLES": {
+    "guest": 0,
+    "user": 2,
+    "editor": 4,
+    "moderator": 8,
+    "admin": 16,
+    "super_admin": 32
+  }
 }

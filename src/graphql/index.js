@@ -17,8 +17,8 @@ const QueryRootType = new GraphQLObjectType({
 
 
 const AppSchema = new GraphQLSchema({
-   query: QueryRootType,
-   mutation: MurationRootType
+  query: QueryRootType,
+  mutation: MurationRootType
 });
 
 module.exports = AppSchema;
