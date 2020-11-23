@@ -4,7 +4,7 @@ const { graphqlHTTP } = require("express-graphql");
 const mongoose = require("mongoose");
 const AppSchema = require("./graphql");
 const {authenticateMiddleware, authenticateBasicMiddleware, authenticateBearerMiddleware} = require("./middlewares");
-const {signInRouter, signOutRouter, signUpRouter} = require("./routers");
+const {signInRouter, signOutRouter, signUpRouter, outhCodeRouter} = require("./routers");
 
 function start() {
   const mongoUri = `${process.env.MONGO_URI}/${process.env.MONGO_DB}`
@@ -17,6 +17,7 @@ function start() {
   app.post("/oauth/signin", authenticateBasicMiddleware, signInRouter);
   app.post("/oauth/signout", authenticateBearerMiddleware, signOutRouter);
   app.post("/oauth/signup", authenticateBasicMiddleware, signUpRouter);
+  app.post("/oauth/outhcode", authenticateBasicMiddleware, outhCodeRouter);
   app.use("/api/graphql", authenticateMiddleware, graphqlHTTP({
       schema: AppSchema,
       graphiql: true,
