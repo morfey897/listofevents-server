@@ -17,7 +17,7 @@ const getUser = {
   resolve: async function (_, { id }, context) {
     const { user } = context || {};
     let one = null;
-    if (user && (user.role & ROLES.moderator == ROLES.moderator) && isValidId(id)) {
+    if (user && (user.role & ROLES.moderator) === ROLES.moderator && isValidId(id)) {
       one = await UserModel.findById(id);
     }
     return one;
@@ -35,7 +35,7 @@ const getUsers = {
     const { user } = context || {};
     let list = null;
 
-    if (user && (user.role & ROLES.moderator == ROLES.moderator)) {
+    if (user && (user.role & ROLES.moderator) === ROLES.moderator) {
       list = await UserModel.find({})
         .skip(paginate && paginate.offset || 0)
         .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE))

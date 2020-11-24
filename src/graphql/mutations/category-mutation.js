@@ -83,7 +83,7 @@ const deleteCategories = {
     if (ids) {
       ids = ids.filter(id => isValidId(id));
       if (ids.length) {
-        let deleteInfo = await CategoryModel.remove({_id: {$in: ids}});
+        let deleteInfo = await CategoryModel.deleteMany({_id: {$in: ids}});
         return deleteInfo.deletedCount;
       }
     }

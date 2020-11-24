@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const Users = require("../models/user-model");
 const AuthCodes = require("../models/authcode-model");
+const { jsTrim, inlineArgs } = require('../utils/validation-utill');
 const { ROLES } = require("../config");
 const ms = require("ms");
 
@@ -16,11 +17,13 @@ const ERROR_INCORRECT_CODE = 102;
 const ERROR_EXIST = 103;
 const ERROR_NOT_EXIST = 104;
 const ERROR_INCORRECT_USERNAME = 105;
+const ERROR_EXIST_EMAIL = 106;
+const ERROR_EXIST_PHONE = 107;
 
 function getUsernameType(username) {
-  if (EMAIL_REG_EXP.test(username)) {
+  if (EMAIL_REG_EXP.test((username || "").trim())) {
     return TYPE_EMAIL;
-  } else if (PHONE_REG_EXP.test(username)) {
+  } else if (PHONE_REG_EXP.test((username || "").replace(/\D/g, ""))) {
     return TYPE_PHONE;
   }
   return TYPE_UNDEFINED;
@@ -41,7 +44,8 @@ function generate(user) {
 }
 
 function outhCodeRouter(req, res) {
-  const { username, isNew = false } = req.body;
+  const { username } = req.body;
+
   const type = getUsernameType(username);
   if (type === TYPE_UNDEFINED) {
     res.json({ success: false, error: 'Username is incorrect', errorCode: ERROR_INCORRECT_USERNAME });
@@ -49,20 +53,11 @@ function outhCodeRouter(req, res) {
     const lifetime = ms(process.env.AUTH_CODE_LIFETIME);
     const codeLen = parseInt(process.env.AUTH_CODE_LEN);
     const usernameNew = prepareUsername(username, type);
-    Users.findOne({ $or: [{ phone: usernameNew }, { email: usernameNew }] }).exec()
-      .then(user => {
-        if (user && isNew) {
-          res.json({ success: false, error: 'Username is exist', errorCode: ERROR_EXIST });
-        } else if (!user && !isNew) {
-          res.json({ success: false, error: "Username isn't exist", errorCode: ERROR_NOT_EXIST });
-        } else {
-
-          const code = (new Array(codeLen).fill("0").join("") + parseInt(Math.random() * Math.pow(10, codeLen)).toString()).slice(-1 * codeLen);
-          const estimate = Date.now() + lifetime;
-          return (new AuthCodes({ username: usernameNew, type, code, estimate })).save();
-        }
-      })
+    const code = (new Array(codeLen).fill("0").join("") + parseInt(Math.random() * Math.pow(10, codeLen)).toString()).slice(-1 * codeLen);
+    const estimate = Date.now() + lifetime;
+    (new AuthCodes({ username: usernameNew, type, code, estimate })).save()
       .then((authcode) => {
+        if (authcode === undefined) return;
         res.json({ success: true, data: { type, lifetime: parseInt(lifetime / 1000), username: usernameNew, codeLen } });
         if (type === TYPE_EMAIL) {
           console.log("You code in email: ", authcode.code);
@@ -97,7 +92,7 @@ function signUpRouter(req, res) {
       })
       .then(user => {
         res.json({ success: true, data: generate(user) });
-        AuthCodes.remove({ estimate: { $gt: Date.now() } });
+        AuthCodes.deleteMany({ estimate: { $lt: Date.now() } }).exec();
       })
       .catch(() => {
         res.json({ success: false, erro: "Code is incorrect", errorCode: ERROR_INCORRECT_CODE });
@@ -120,6 +115,64 @@ function signInRouter(req, res) {
     });
 }
 
+function renameRouter(req, res) {
+  const { name, surname, phone, email, password, code } = req.body;
+  const currentUser = req.user;
+
+  const typePhone = getUsernameType(phone);
+  const typeEmail = getUsernameType(email);
+
+  let newPhone = "";
+  let newEmail = "";
+  if (typePhone === TYPE_PHONE) {
+    newPhone = prepareUsername(phone, typePhone);
+  } else if (typePhone === TYPE_EMAIL) {
+    newEmail = prepareUsername(phone, typePhone);
+  }
+
+  if (typeEmail === TYPE_PHONE) {
+    newPhone = prepareUsername(email, typeEmail);
+  } else if (typeEmail === TYPE_EMAIL) {
+    newEmail = prepareUsername(email, typeEmail);
+  }
+
+  AuthCodes.findOne({$or: [{ username: newEmail, code }, { username: newPhone, code }]}).exec()
+    .then(authcode => {
+      if (!authcode || Date.now() > authcode.estimate) throw new Error("Not exist");
+      let fields = [];
+      if (newPhone) {
+        fields.push({ phone: newPhone });
+      }
+      if (newEmail) {
+        fields.push({ email: newEmail });
+      }
+      return Users.find({ $or: fields }).exec();
+    })
+    .then(users => {
+      const user = users && users.length && users.find(({ _id }) => currentUser.id != _id);
+      if (user) {
+        res.json({ success: false, error: 'Username is exist', errorCode: newEmail && user.email == newEmail ? ERROR_EXIST_EMAIL : (newPhone && user.phone == newPhone ? ERROR_EXIST_PHONE : ERROR_EXIST)});
+      } else {
+        return Users.findOneAndUpdate({ _id: currentUser.id }, {
+          $set: inlineArgs(jsTrim({
+            email: newEmail,
+            phone: newPhone,
+            name, surname, password
+          }, ["email", "phone", "name", "surname"]))
+        }, { new: true }).exec();
+      }
+    })
+    .then(user => {
+      if (user !== undefined) {
+        res.json({ success: true, data: generate(user) });
+      }
+      AuthCodes.deleteMany({ estimate: { $lt: Date.now() } }).exec();
+    })
+    .catch(() => {
+      res.json({ success: false, erro: "Code is incorrect", errorCode: ERROR_INCORRECT_CODE });
+    })
+}
+
 function signOutRouter(req, res) {
   res.json({ success: true, data: generate() });
 }
@@ -128,5 +181,6 @@ module.exports = {
   signInRouter,
   signOutRouter,
   signUpRouter,
+  renameRouter,
   outhCodeRouter,
 };

@@ -32,7 +32,7 @@ const createTags = {
   resolve: async function (_, { labels }, context) {
     const { user } = context;
     let list = null;
-    if (user && (user.role & ROLES.editor === ROLES.editor)) {
+    if (user && (user.role & ROLES.editor) === ROLES.editor) {
       let tags = (labels || []).map(t => jsTrim(t || "")).filter(t => isValidTag(t));
       if (tags.length) {
         const newListTags = tags.filter(t => isValidTag(t));
@@ -56,7 +56,7 @@ const updateTag = {
   resolve: async function (_, { id, ...args }, context) {
     const { user } = context;
     let updateInfo;
-    if (user && isValidId(id) && (user.role & ROLES.moderator === ROLES.moderator)) {
+    if (user && isValidId(id) && (user.role & ROLES.moderator) === ROLES.moderator) {
       updateInfo = await TagModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, { label: true })) }, { new: true });
     }
     return updateInfo;
@@ -70,10 +70,10 @@ const deleteTags = {
   },
   resolve: async function (_, { ids }, context) {
     const { user } = context;
-    if (ids && user && (user.role & ROLES.moderator === ROLES.moderator)) {
+    if (ids && user && (user.role & ROLES.moderator) === ROLES.moderator) {
       ids = ids.filter(id => isValidId(id));
       if (ids.length) {
-        let deleteInfo = await TagModel.remove({ _id: { $in: ids } });
+        let deleteInfo = await TagModel.deleteMany({ _id: { $in: ids } });
         return deleteInfo.deletedCount;
       }
     }

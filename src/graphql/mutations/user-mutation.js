@@ -24,9 +24,9 @@ const updateUser = {
 
     let updateInfo;
     if (user && isValidId(id)) {
-      if (user.role & ROLES.super_admin == ROLES.super_admin) {
+      if ((user.role & ROLES.super_admin) == ROLES.super_admin) {
         updateInfo = await UserModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim({...args, role: role || ROLES.user}, ["email", "phone", "name", "surname"])) }, { new: true });
-      } else if (user.role & ROLES.admin == ROLES.admin) {
+      } else if ((user.role & ROLES.admin) == ROLES.admin) {
         updateInfo = await UserModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, ["email", "phone", "name", "surname"])) }, { new: true });
       } else if (user.id === id) {
         updateInfo = await UserModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, ["email", "phone", "name", "surname"])) }, { new: true });
@@ -43,10 +43,10 @@ const deleteUser = {
   },
   resolve: async function (_, {ids}, context) {
     const {user} = context;
-    if (ids && user && (user.role & ROLES.super_admin === ROLES.super_admin)) {
+    if (ids && user && (user.role & ROLES.super_admin) === ROLES.super_admin) {
       ids = ids.filter(id => isValidId(id));
       if (ids.length) {
-        let deleteInfo = await UserModel.remove({_id: {$in: ids}});
+        let deleteInfo = await UserModel.deleteMany({_id: {$in: ids}});
         return deleteInfo.deletedCount;
       }
     }

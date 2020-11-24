@@ -124,7 +124,7 @@ const deleteEvents = {
     if (ids) {
       ids = ids.filter(id => isValidId(id));
       if (ids.length) {
-        let deleteInfo = await EventModel.remove({ _id: { $in: ids } });
+        let deleteInfo = await EventModel.deleteMany({ _id: { $in: ids } });
         return deleteInfo.deletedCount;
       }
     }

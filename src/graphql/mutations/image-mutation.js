@@ -53,7 +53,7 @@ const deleteImages = {
     if (ids) {
       ids = ids.filter(id => isValidId(id));
       if (ids.length) {
-        let deleteInfo = await ImageModel.remove({_id: {$in: ids}});
+        let deleteInfo = await ImageModel.deleteMany({_id: {$in: ids}});
         return deleteInfo.deletedCount;
       }
     }
