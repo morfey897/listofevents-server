@@ -1,26 +1,20 @@
-const { GraphQLList, GraphQLID, GraphQLInputObjectType, GraphQLString } = require('graphql');
+const { GraphQLList, GraphQLID, GraphQLObjectType, GraphQLInt } = require('graphql');
 
 const CityModel = require('../../models/city-model');
 const CityType = require('../types/city-type');
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
-const { filterField } = require('../../utils/filter-utill');
 
 const MAX_SIZE = 100;
 
-const FilterCityType = new GraphQLInputObjectType({
-  name: "FilterCityType",
+const ResultType = new GraphQLObjectType({
+  name: "ResultTypeCities",
   fields: () => ({
-    country_id: { type: GraphQLString },
-    token: { type: GraphQLString },
-    fields: { type: new GraphQLList(GraphQLString) }
+    offset: { type: GraphQLInt },
+    total: { type: GraphQLInt },
+    list: { type: new GraphQLList(CityType) }
   })
 });
-
-const findCity = async (city) => {
-  const cityModel = await CityModel.findOne(isValidId(city) ? { _id: city } : { $or: filterField(city, ['name'])});
-  return cityModel;
-}
 
 const getCity = {
   type: CityType,
@@ -41,39 +35,25 @@ const getCity = {
 }
 
 const getCities = {
-  type: new GraphQLList(CityType),
+  type: ResultType,
   description: "List of all cities",
   args: {
-    filter: { type: FilterCityType },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const { filter, paginate } = args || {};
+    const { paginate } = args || {};
+    const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
+    const total = await CityModel.countDocuments();
+    const offset = Math.min(paginate && paginate.offset || 0, total);
+    let list = await CityModel.find({})
+      .skip(offset)
+      .limit(limit);
 
-    const filterCountryId = filter && filter.country_id || "";
-    const filterFields = filter && filter.fields || [];
-    const filterToken = filter && filter.token || "";
-    if (filterToken && !filterFields.length) {
-      filterFields.push("name");
-    }
-
-    let filterObj;
-    if (isValidId(filterCountryId)) {
-      filterObj = {country_id: filterCountryId};
-    }
-    if (filterToken) {
-      const orCond = { $or: filterField(filterToken, filterFields) };
-      if (filterObj) {
-        filterObj = {$and: [filterObj, orCond]};
-      } else {
-        filterObj = orCond;
-      }
-    }
-
-    let list = await CityModel.find(filterObj || {})
-      .skip(paginate && paginate.offset || 0)
-      .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE));
-    return list;
+    return {
+      list,
+      offset,
+      total 
+    };
   }
 }
 
@@ -82,5 +62,4 @@ module.exports = {
     getCity,
     getCities,
   },
-  findCity
 };

@@ -7,11 +7,8 @@ const Schema = mongoose.Schema
 const citySchema = new Schema(
   {
     name: array2Obj(LANGS, Schema.Types.String),
-    country_id: Schema.Types.ObjectId,
-    coords: {
-      lat: Schema.Types.Number,
-      lon: Schema.Types.Number,
-    },
+    description: array2Obj(LANGS, Schema.Types.String),
+    place_id: Schema.Types.String,
   }
 )
 

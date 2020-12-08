@@ -1,13 +1,13 @@
-const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat } = require('graphql')
+const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat, GraphQLError } = require('graphql')
 const shortid = require('shortid');
 
 const CategoryModel = require('../../models/category-model');
 const CategoryType = require('../types/category-type');
 
-const { addTags } = require('../mutations/tag-mutation');
-
-const { isValidId, jsTrim, isValidUrl, inlineArgs } = require('../../utils/validation-utill');
+const { isValidId, jsTrim, jsSanitize, isValidUrl, inlineArgs, isValidTag } = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
+const { ROLES } = require('../../config');
+const { ERRORCODES } = require('../../errors');
 
 const createCategory = {
   type: CategoryType,
@@ -18,59 +18,69 @@ const createCategory = {
     tags: { type: new GraphQLList(GraphQLString) },
     // images: { type: new GraphQLList(GraphQLString) },
   },
-  resolve: async function (_, {tags, ...args}) {
-    let categoryModel;
-    if (isValidUrl(args.url)) {
+  resolve: async function (_, body, context) {
+    let { url, name, tags, description } = body;
+    const { user } = context;
 
-      args.url += "-" + shortid.generate();
+    let error = null;
+    let success = null;
 
-      tags = await addTags(tags);
+    if (!user || (user.role & ROLES.moderator) !== ROLES.moderator) {
+      error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+    } if (!isValidUrl(url)) {
+      error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_URL);
+    } else {
+      url += "-" + shortid.generate();
 
-      categoryModel = await (new CategoryModel({
-        tags_id: tags,
+      success = await (new CategoryModel({
         images_id: [],
-        ...jsTrim(args, {name: true, url: true})
+        tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
+        description: jsSanitize(description),
+        ...jsTrim({ url, name })
       })).save();
     }
-    
-    if (!categoryModel) {
-      console.warn('Create category:', tags, args);
+
+    if (!success) {
+      throw (error || new GraphQLError(ERRORCODES.ERROR_WRONG));
     }
 
-    return categoryModel;
+    return success;
   }
 }
 
 const updateCategory = {
   type: CategoryType,
   args: {
-    id: {type: GraphQLID},
+    id: { type: GraphQLID },
     url: { type: GraphQLString },
     name: { type: TranslateInputType },
     description: { type: TranslateInputType },
     tags: { type: new GraphQLList(GraphQLString) },
     // images: { type: new GraphQLList(GraphQLString) },
   },
-  resolve: async function (_, {id, tags, ...args}) {
-    let updateCategoryInfo;
-    if (isValidId(id)) {
-      if (tags && tags.length) {
-        tags = await addTags(tags);
-      }
+  resolve: async function (_, { id, tags, description, ...args }, context) {
+    const { user } = context;
+    let success = null;
+    let error = null;
 
-      if (!isValidUrl(args.url)) {
-        args.url = "";
-      } else {
-        args.url += "-" + shortid.generate();
-      }
+    if (!user || (user.role & ROLES.moderator) !== ROLES.moderator) {
+      error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+    } else {
 
-      updateCategoryInfo = await CategoryModel.findOneAndUpdate({_id: id}, { $set: inlineArgs(jsTrim({tags_id: tags, ...args}, { name: true, url: true })) }, { new: true });
+      args.url = isValidUrl(args.url) ? args.url + "-" + shortid.generate() : "";
+      success = await CategoryModel.findOneAndUpdate({ _id: id }, {
+        $set: inlineArgs({
+          tags: tags && tags.length > 0 && tags.map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
+          description: description && jsSanitize(description),
+          ...jsTrim(args, { name: true, url: true, })
+        })
+      }, { new: true });
     }
-    
-    if (!updateCategoryInfo) {
-      console.warn('Update category:', id, args);
+
+    if (!success) {
+      throw (error || new GraphQLError(ERRORCODES.ERROR_WRONG));
     }
-    return updateCategoryInfo;
+    return success;
   }
 }
 
@@ -79,16 +89,21 @@ const deleteCategories = {
   args: {
     ids: { type: new GraphQLList(GraphQLID) }
   },
-  resolve: async function (_, {ids}) {
-    if (ids) {
-      ids = ids.filter(id => isValidId(id));
+  resolve: async function (_, { ids }, context) {
+    const { user } = context;
+
+    if (!user || (user.role & ROLES.admin) !== ROLES.admin) {
+      throw new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+    } else {
+      ids = ids && ids.filter(id => isValidId(id)) || [];
       if (ids.length) {
-        let deleteInfo = await CategoryModel.deleteMany({_id: {$in: ids}});
+        let deleteInfo = await CategoryModel.deleteMany({ _id: { $in: ids } });
         return deleteInfo.deletedCount;
       }
     }
+
     return 0;
   }
 }
 
-module.exports = { graphql: {createCategory, updateCategory, deleteCategories} }
+module.exports = { graphql: { createCategory, updateCategory, deleteCategories } }

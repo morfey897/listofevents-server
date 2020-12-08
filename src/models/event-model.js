@@ -10,16 +10,17 @@ const eventSchema = new Schema(
     url: Schema.Types.String,
     name: array2Obj(LANGS, Schema.Types.String),
     description: array2Obj(LANGS, Schema.Types.String),
+    location: array2Obj(LANGS, Schema.Types.String),
+    
     images_id: [Schema.Types.ObjectId],
-    tags_id: [Schema.Types.ObjectId],
+    tags: [Schema.Types.String],
 
     city_id: Schema.Types.ObjectId,
     category_id: Schema.Types.ObjectId,
-    place: array2Obj(LANGS, Schema.Types.String),
-    coords: {
-      lat: Schema.Types.Number,
-      lon: Schema.Types.Number,
-    },
+
+    created_at: Schema.Types.Date,
+    updated_at: Schema.Types.Date,
+    author_id: Schema.Types.ObjectId
   }
 )
 

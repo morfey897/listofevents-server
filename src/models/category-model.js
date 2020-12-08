@@ -10,7 +10,7 @@ const categorySchema = new Schema(
     name: array2Obj(LANGS, Schema.Types.String),
     description: array2Obj(LANGS, Schema.Types.String),
     images_id: [Schema.Types.ObjectId],
-    tags_id: [Schema.Types.ObjectId],
+    tags: [Schema.Types.String],
   }
 )
 

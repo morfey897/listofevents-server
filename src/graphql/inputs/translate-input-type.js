@@ -1,5 +1,5 @@
 
-const { GraphQLString, GraphQLInputObjectType, GraphQLNonNull } = require('graphql');
+const { GraphQLString, GraphQLInputObjectType } = require('graphql');
 const { LANGS } = require('../../config');
 const { array2Obj } = require('../../utils/array-utill');
 

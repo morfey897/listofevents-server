@@ -7,7 +7,7 @@ const { isValidId, inlineArgs, jsTrim } = require('../../utils/validation-utill'
 const TranslateInputType = require('../inputs/translate-input-type');
 const CoordsInputType = require('../inputs/coords-input-type');
 
-const { findCountry } = require('../queries/country-query');
+// const { findCountry } = require('../queries/country-query');
 
 const createCity = {
   type: CityType,
@@ -16,16 +16,16 @@ const createCity = {
     name: { type: new GraphQLNonNull(TranslateInputType) },
     coords: { type: CoordsInputType },
   },
-  resolve: async function (_, {country, ...args}) {
+  resolve: async function (_, {...args}) {
 
-    let countryModel = await findCountry(jsTrim(country || ""));
+    // let countryModel = await findCountry(jsTrim(country || ""));
     
-    if (!countryModel) {
-      console.warn('Country not found:', args);
-      return;
-    }
+    // if (!countryModel) {
+    //   console.warn('Country not found:', args);
+    //   return;
+    // }
 
-    args = Object.assign({}, args, { country_id: countryModel._id.toString() });
+    // args = Object.assign({}, args, { country_id: countryModel._id.toString() });
     let oneModel = await (new CityModel(jsTrim(args, { name: true }))).save();
     return oneModel;
   }
@@ -39,18 +39,18 @@ const updateCity = {
     name: { type: TranslateInputType },
     coords: { type: CoordsInputType },
   },
-  resolve: async function (_, { id, country, ...args }) {
+  resolve: async function (_, { id, ...args }) {
     let updateCityInfo;
-    if (isValidId(id)) {
+    // if (isValidId(id)) {
 
-      if (country) {
-        let countryModel = await findCountry(jsTrim(country || ""));
-        if (countryModel) {
-          args = Object.assign({}, args, { country_id: countryModel._id.toString() });
-        }
-      }
-      updateCityInfo = await CityModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, { name: true })) }, { new: true });
-    }
+    //   if (country) {
+    //     let countryModel = await findCountry(jsTrim(country || ""));
+    //     if (countryModel) {
+    //       args = Object.assign({}, args, { country_id: countryModel._id.toString() });
+    //     }
+    //   }
+    //   updateCityInfo = await CityModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, { name: true })) }, { new: true });
+    // }
 
     if (!updateCityInfo) {
       console.warn('Update city:', id, args);

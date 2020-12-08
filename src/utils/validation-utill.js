@@ -1,3 +1,5 @@
+const sanitizeHtml = require('sanitize-html');
+
 const isValidId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
 const isValidTag = (tag) => tag && /^\s*#\w+\s*$/.test(tag);
 const isValidUrl = (url) => url && /^\s*\/[a-z][\w-]{2,}[a-z0-9]\s*$/.test(url);
@@ -50,6 +52,12 @@ const jsTrim = (args, filter) => {
   if (typeof args === "string") return args.trim();
   return _jsStringPrepare(args, filter, (str) => str.trim());
 };
+
+const jsSanitize = (args, filter) => {
+  if (typeof args === "string") return sanitizeHtml(args);
+  return _jsStringPrepare(args, filter, (str) => sanitizeHtml(str));
+}
+
 const inlineArgs = (args) => _mutateArgs(args, [], {});
 
 module.exports = {
@@ -57,6 +65,7 @@ module.exports = {
   isValidTag,
   isValidUrl,
   jsUcfirst,
+  jsSanitize,
   jsTrim,
   inlineArgs,
 };

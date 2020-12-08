@@ -1,60 +1,49 @@
-const { GraphQLList, GraphQLID, GraphQLInt } = require('graphql');
-const { isValidId } = require('../../utils/validation-utill');
+const { GraphQLList, GraphQLString, GraphQLObjectType, GraphQLInt } = require('graphql');
 
-const TagModel = require('../../models/tag-model');
-const TagType = require('../types/tag-type');
+const CategoryModel = require('../../models/category-model');
+const EventModel = require('../../models/event-model');
+
 const PaginateType = require('../types/paginate-type');
-const FilterType = require('../types/filter-type');
 
 const MAX_SIZE = 100;
 
-const getTag = {
-  type: TagType,
-  args: {
-    id: { type: GraphQLID }
-  },
-  description: "Single tag by ID",
-  resolve: async function (_, { id }) {
-    let one = null;
-    if (isValidId(id)) {
-      one = await TagModel.findById(id);
-    }
-    if (!one) {
-      console.warn("NotFound:", id);
-    }
-    return one;
-  }
-}
+const ResultType = new GraphQLObjectType({
+  name: "ResultTypeTags",
+  fields: () => ({
+    offset: { type: GraphQLInt},
+    total: { type: GraphQLInt },
+    list: { type: new GraphQLList(GraphQLString) }
+  })
+});
 
 const getTags = {
-  type: new GraphQLList(TagType),
+  type: ResultType,
   description: "List of all tags",
   args: {
-    filter: { type: FilterType },
-    paginate: { type: PaginateType },
+    paginate: { type: PaginateType }
   },
   resolve: async function (_, args) {
-    const { filter, paginate } = args || {};
+    const { paginate } = args;
 
-    const filterFields = filter && filter.fields || [];
-    const filterToken = filter && filter.token || "";
-    if (filterToken && !filterFields.length) {
-      filterFields.push("label");
-    }
+    const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
 
-    let list = await TagModel.find(
-      filterToken ? { $or: filterFields.map((f) => ({ [f]: { $regex: filter.token, $options: "i" } })) } : {},
-    )
-      .skip(paginate && paginate.offset || 0)
-      .limit(paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE));
+    let events = await EventModel.find({}).limit(limit);
+    let categories = await CategoryModel.find({}).limit(limit);
+    
+    const list = [].concat(categories.map(({ tags }) => tags), events.map(({ tags }) => tags)).reduce((prev, tags) => {
+      return [...new Set(prev.concat(tags))];
+    }, []).slice(0, limit);
 
-    return list;
+    return {
+      offset: 0,
+      list,
+      total: list.length
+    };
   }
 }
 
 module.exports = {
   graphql: {
-    getTag,
     getTags,
   }
 };

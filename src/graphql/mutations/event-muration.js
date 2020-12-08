@@ -1,18 +1,31 @@
-const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLList } = require('graphql')
+const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError } = require('graphql')
 const { GraphQLDateTime } = require('graphql-iso-date');
 const shortid = require('shortid');
 
 const EventModel = require('../../models/event-model');
-
-const { addTags } = require('../mutations/tag-mutation');
-const { findCity } = require('../queries/city-query');
-const { findCategory } = require('../queries/category-query');
+const CategoryModel = require('../../models/category-model');
+const CityModel = require('../../models/city-model');
 
 const EventType = require('../types/event-type');
 
-const { isValidId, inlineArgs, jsTrim, isValidUrl } = require('../../utils/validation-utill');
+const { isValidId, inlineArgs, jsTrim, isValidUrl, jsSanitize, isValidTag } = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
 const CoordsInputType = require('../inputs/coords-input-type');
+
+const { ROLES } = require('../../config');
+const { ERRORCODES } = require('../../errors');
+
+const CityInputType = new GraphQLInputObjectType({
+  name: 'CityInputType',
+  description: "This is input city type",
+  fields: () => ({
+    _id: { type: GraphQLString },
+    name: { type: TranslateInputType },
+    description: { type: TranslateInputType },
+    place_id: { type: GraphQLString },
+  })
+});
+
 
 const createEvent = {
   type: EventType,
@@ -21,44 +34,73 @@ const createEvent = {
     url: { type: new GraphQLNonNull(GraphQLString) },
     name: { type: new GraphQLNonNull(TranslateInputType) },
     description: { type: new GraphQLNonNull(TranslateInputType) },
-    place: { type: new GraphQLNonNull(TranslateInputType) },
-    coords: { type: CoordsInputType },
+    location: { type: new GraphQLNonNull(TranslateInputType) },
     tags: { type: new GraphQLList(GraphQLString) },
+    category_id: { type: new GraphQLNonNull(GraphQLString) },
+    city: { type: new GraphQLNonNull(CityInputType) },
     // images: { type: new GraphQLList(GraphQLString) },
-    category: { type: new GraphQLNonNull(GraphQLString) },
-    city: { type: new GraphQLNonNull(GraphQLString) },
   },
-  resolve: async function (_, { city, category, tags, ...args }) {
-    let saveEvent;
-    if (isValidUrl(args.url)) {
-      args.url += "-" + shortid.generate();
+  resolve: async function (_, body, context) {
+    let { url, city, category_id, tags, description, location, date, name } = body;
+    const { user } = context;
 
-      const cityModel = await findCity(city);
-      if (!cityModel) {
-        console.error("Create event! City not found:", city);
-        return;
+    let error = null;
+    let success = null;
+
+    if (!user || (user.role & ROLES.moderator) !== ROLES.moderator) {
+      error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+    } if (!isValidUrl(url)) {
+      error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_URL);
+    } else {
+      //Check category
+      let categoryModel = null;
+      if (isValidId(category_id)) {
+        categoryModel = await CategoryModel.findOne({ _id: category_id });
       }
-
-      const categoryModel = await findCategory(category);
       if (!categoryModel) {
-        console.error("Create event! Category not found:", category);
-        return;
+        error = new GraphQLError(ERRORCODES.ERROR_CATEGORY_NOT_EXIST);
+      } else {
+
+        let cityModel = null;
+        if (isValidId(city._id)) {
+          cityModel = await CityModel.findOne({ _id: city._id });
+        } else {
+          cityModel = await CityModel.findOne({ place_id: city.place_id });
+          if (!cityModel) {
+            cityModel = await (new CityModel({
+              place_id: city.place_id,
+              ...jsTrim({ name: city.name, description: city.description }),
+            })).save();
+          } else {
+            cityModel = await CityModel.findOneAndUpdate({ _id: cityModel._id }, { $set: inlineArgs(jsTrim({ name: city.name, description: city.description })) }, { new: true });
+          }
+        }
+        if (!cityModel) {
+          error = new GraphQLError(ERRORCODES.ERROR_CITY_NOT_EXIST);
+        } else {
+          url += "-" + shortid.generate();
+
+          success = await (new EventModel({
+            images_id: [],
+            tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
+            description: jsSanitize(description),
+            created_at: Date.now(),
+            updated_at: Date.now(),
+            date,
+            city_id: cityModel._id,
+            category_id: categoryModel._id,
+            author_id: user.id,
+            ...jsTrim({ url, name, location }),
+          })).save();
+        }
       }
-
-      tags = await addTags(tags);
-
-      saveEvent = await (new EventModel({
-        city_id: cityModel._id,
-        category_id: categoryModel._id,
-        tags_id: tags,
-        images_id: [],
-        ...jsTrim(args, { name: true, url: true })
-      })).save();
     }
-    if (!saveEvent) {
-      console.error("Create:", args);
+
+    if (!success) {
+      throw (error || new GraphQLError(ERRORCODES.ERROR_WRONG));
     }
-    return saveEvent;
+
+    return success;
   }
 }
 
@@ -82,23 +124,23 @@ const updateEvent = {
   resolve: async function (_, { id, city, category, tags, ...args }) {
     let updateEventInfo;
     if (isValidId(id)) {
-      if (tags && tags.length) {
-        tags = await addTags(tags);
-      }
+      // if (tags && tags.length) {
+      //   tags = await addTags(tags);
+      // }
 
-      if (city) {
-        let cityModel = await findCity(city);
-        if (cityModel) {
-          args = Object.assign({}, args, { city_id: cityModel._id.toString() });
-        }
-      }
+      // if (city) {
+      //   let cityModel = await findCity(city);
+      //   if (cityModel) {
+      //     args = Object.assign({}, args, { city_id: cityModel._id.toString() });
+      //   }
+      // }
 
-      if (category) {
-        let categoryModel = await findCity(category);
-        if (categoryModel) {
-          args = Object.assign({}, args, { category_id: categoryModel._id.toString() });
-        }
-      }
+      // if (category) {
+      //   let categoryModel = await findCity(category);
+      //   if (categoryModel) {
+      //     args = Object.assign({}, args, { category_id: categoryModel._id.toString() });
+      //   }
+      // }
       if (!isValidUrl(args.url)) {
         args.url = "";
       } else {
@@ -120,12 +162,19 @@ const deleteEvents = {
   args: {
     ids: { type: new GraphQLList(GraphQLID) }
   },
-  resolve: async function (_, { ids }) {
-    if (ids) {
-      ids = ids.filter(id => isValidId(id));
-      if (ids.length) {
+  resolve: async function (_, body, context) {
+    let { ids } = body;
+    const { user } = context;
+    ids = ids && ids.filter(id => isValidId(id)) || [];
+    if (ids.length) {
+      if (user && (user.role & ROLES.admin) === ROLES.admin) {
         let deleteInfo = await EventModel.deleteMany({ _id: { $in: ids } });
         return deleteInfo.deletedCount;
+      } else if (user) {
+        let deleteInfo = await EventModel.deleteMany({ $and: [{ _id: { $in: ids } }, { author_id: user.id }] });
+        return deleteInfo.deletedCount;
+      } else {
+        throw new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
       }
     }
     return 0;

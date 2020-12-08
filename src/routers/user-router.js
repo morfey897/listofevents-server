@@ -4,6 +4,7 @@ const AuthCodes = require("../models/authcode-model");
 const { jsTrim, inlineArgs } = require('../utils/validation-utill');
 const { ROLES } = require("../config");
 const ms = require("ms");
+const { ERRORCODES, getError } = require("../errors");
 
 const EMAIL_REG_EXP = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const PHONE_REG_EXP = /^\+?\d{10,}$/;
@@ -11,14 +12,6 @@ const PHONE_REG_EXP = /^\+?\d{10,}$/;
 const TYPE_EMAIL = "email";
 const TYPE_PHONE = "phone";
 const TYPE_UNDEFINED = "_undefined";
-
-const ERROR_WRONG = 101;
-const ERROR_INCORRECT_CODE = 102;
-const ERROR_EXIST = 103;
-const ERROR_NOT_EXIST = 104;
-const ERROR_INCORRECT_USERNAME = 105;
-const ERROR_EXIST_EMAIL = 106;
-const ERROR_EXIST_PHONE = 107;
 
 function getUsernameType(username) {
   if (EMAIL_REG_EXP.test((username || "").trim())) {
@@ -48,7 +41,7 @@ function outhCodeRouter(req, res) {
 
   const type = getUsernameType(username);
   if (type === TYPE_UNDEFINED) {
-    res.json({ success: false, error: 'Username is incorrect', errorCode: ERROR_INCORRECT_USERNAME });
+    res.json({ success: false, ...getError(ERRORCODES.ERROR_INCORRECT_USERNAME) });
   } else {
     const lifetime = ms(process.env.AUTH_CODE_LIFETIME);
     const codeLen = parseInt(process.env.AUTH_CODE_LEN);
@@ -66,7 +59,7 @@ function outhCodeRouter(req, res) {
         }
       })
       .catch(() => {
-        res.json({ success: false, error: 'Something went wrong', errorCode: ERROR_WRONG });
+        res.json({ success: false, ...getError(ERRORCODES.ERROR_WRONG) });
       })
   }
 }
@@ -75,7 +68,7 @@ function signUpRouter(req, res) {
   const { username, name, password, code } = req.body;
   const type = getUsernameType(username);
   if (type === TYPE_UNDEFINED || !password) {
-    res.json({ success: false, error: 'Username or password incorrect', errorCode: ERROR_INCORRECT_USERNAME });
+    res.json({ success: false, ...getError(ERRORCODES.ERROR_INCORRECT_USERNAME) });
   } else {
     const usernameNew = prepareUsername(username, type);
     AuthCodes.findOne({ username: usernameNew, code }).exec()
@@ -85,7 +78,7 @@ function signUpRouter(req, res) {
       })
       .then(user => {
         if (user) {
-          res.json({ success: false, error: 'Username is exist', errorCode: ERROR_EXIST });
+          res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_EXIST) });
         } else {
           return (new Users({ name: (name || "").trim(), surname: "", email: type === TYPE_EMAIL ? usernameNew : "", phone: type === TYPE_PHONE ? usernameNew : "", password, role: ROLES.user })).save();
         }
@@ -95,7 +88,7 @@ function signUpRouter(req, res) {
         AuthCodes.deleteMany({ estimate: { $lt: Date.now() } }).exec();
       })
       .catch(() => {
-        res.json({ success: false, erro: "Code is incorrect", errorCode: ERROR_INCORRECT_CODE });
+        res.json({ success: false, ...getError(ERRORCODES.ERROR_INCORRECT_CODE) });
       })
   }
 }
@@ -111,7 +104,7 @@ function signInRouter(req, res) {
       res.json({ success: true, data: generate(user) });
     })
     .catch(() => {
-      res.json({ success: false, error: 'Username or password incorrect', errorCode: ERROR_NOT_EXIST });
+      res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_NOT_EXIST) });
     });
 }
 
@@ -136,7 +129,7 @@ function renameRouter(req, res) {
     newEmail = prepareUsername(email, typeEmail);
   }
 
-  AuthCodes.findOne({$or: [{ username: newEmail, code }, { username: newPhone, code }]}).exec()
+  AuthCodes.findOne({ $or: [{ username: newEmail, code }, { username: newPhone, code }] }).exec()
     .then(authcode => {
       if (!authcode || Date.now() > authcode.estimate) throw new Error("Not exist");
       let fields = [];
@@ -151,7 +144,7 @@ function renameRouter(req, res) {
     .then(users => {
       const user = users && users.length && users.find(({ _id }) => currentUser.id != _id);
       if (user) {
-        res.json({ success: false, error: 'Username is exist', errorCode: newEmail && user.email == newEmail ? ERROR_EXIST_EMAIL : (newPhone && user.phone == newPhone ? ERROR_EXIST_PHONE : ERROR_EXIST)});
+        res.json({ success: false, ...getError(newEmail && user.email == newEmail ? ERRORCODES.ERROR_EXIST_EMAIL : (newPhone && user.phone == newPhone ? ERRORCODES.ERROR_EXIST_PHONE : ERRORCODES.ERROR_USER_EXIST)) });
       } else {
         return Users.findOneAndUpdate({ _id: currentUser.id }, {
           $set: inlineArgs(jsTrim({
@@ -169,7 +162,7 @@ function renameRouter(req, res) {
       AuthCodes.deleteMany({ estimate: { $lt: Date.now() } }).exec();
     })
     .catch(() => {
-      res.json({ success: false, erro: "Code is incorrect", errorCode: ERROR_INCORRECT_CODE });
+      res.json({ success: false, ...getError(ERRORCODES.ERROR_INCORRECT_CODE) });
     })
 }
 
