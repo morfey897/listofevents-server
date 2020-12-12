@@ -1,9 +1,10 @@
-const { GraphQLList, GraphQLID, GraphQLObjectType, GraphQLInt } = require('graphql');
+const { GraphQLList, GraphQLID, GraphQLObjectType, GraphQLInt, GraphQLError } = require('graphql');
 
 const CityModel = require('../../models/city-model');
 const CityType = require('../types/city-type');
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
+const { ERRORCODES } = require('../../errors');
 
 const MAX_SIZE = 100;
 
@@ -26,6 +27,8 @@ const getCity = {
     let one = null;
     if (isValidId(id)) {
       one = await CityModel.findById(id);
+    } else {
+      throw new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
     }
     if (!one) {
       console.warn("NotFound:", id);

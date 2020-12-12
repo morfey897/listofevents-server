@@ -1,4 +1,4 @@
-const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError } = require('graphql')
+const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError, GraphQLInt } = require('graphql')
 const { GraphQLDateTime } = require('graphql-iso-date');
 const shortid = require('shortid');
 
@@ -31,6 +31,7 @@ const createEvent = {
   type: EventType,
   args: {
     date: { type: new GraphQLNonNull(GraphQLDateTime) },
+    duration: { type: new GraphQLNonNull(GraphQLInt) },
     url: { type: new GraphQLNonNull(GraphQLString) },
     name: { type: new GraphQLNonNull(TranslateInputType) },
     description: { type: new GraphQLNonNull(TranslateInputType) },
@@ -41,7 +42,7 @@ const createEvent = {
     // images: { type: new GraphQLList(GraphQLString) },
   },
   resolve: async function (_, body, context) {
-    let { url, city, category_id, tags, description, location, date, name } = body;
+    let { url, city, category_id, tags, description, location, date, time, duration, name } = body;
     const { user } = context;
 
     let error = null;
@@ -87,6 +88,8 @@ const createEvent = {
             created_at: Date.now(),
             updated_at: Date.now(),
             date,
+            time,
+            duration,
             city_id: cityModel._id,
             category_id: categoryModel._id,
             author_id: user.id,

@@ -1,5 +1,5 @@
 
-const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLList } = require('graphql');
+const { GraphQLString, GraphQLObjectType, GraphQLID, GraphQLList, GraphQLInt } = require('graphql');
 const { GraphQLDateTime } = require('graphql-iso-date');
 
 const CityType = require('./city-type');
@@ -20,6 +20,7 @@ const EventType = new GraphQLObjectType({
   fields: () => ({
     _id: { type: GraphQLID },
     date: { type: GraphQLDateTime },
+    duration: { type: GraphQLInt },
     created_at: { type: GraphQLDateTime },
     updated_at: { type: GraphQLDateTime },
     url: { type: GraphQLString },

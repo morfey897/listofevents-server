@@ -1,22 +1,32 @@
-const { GraphQLList, GraphQLID, GraphQLString, GraphQLInt, GraphQLInputObjectType } = require('graphql');
-const { GraphQLDateTime } = require('graphql-iso-date');
+const { GraphQLList, GraphQLID, GraphQLString, GraphQLInt, GraphQLInputObjectType, GraphQLError, GraphQLObjectType } = require('graphql');
+const { GraphQLDate } = require('graphql-iso-date');
 
 const EventModel = require('../../models/event-model');
 const EventType = require('../types/event-type');
 
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
+const { ERRORCODES } = require('../../errors');
 
 const MAX_SIZE = 100;
+
+const ResultType = new GraphQLObjectType({
+  name: "ResultTypeEvents",
+  fields: () => ({
+    offset: { type: GraphQLInt },
+    total: { type: GraphQLInt },
+    list: { type: new GraphQLList(EventType) }
+  })
+});
 
 const FilterEventType = new GraphQLInputObjectType({
   name: "FilterEventType",
   fields: () => ({
-    dateFrom: { type: GraphQLDateTime },
-    dateTo: { type: GraphQLDateTime },
+    dateFrom: { type: GraphQLDate },
+    dateTo: { type: GraphQLDate },
     cities_id: { type: new GraphQLList(GraphQLString) },
     categories_id: { type: new GraphQLList(GraphQLString) },
-    tags_id: { type: new GraphQLList(GraphQLString) },
+    tags: { type: new GraphQLList(GraphQLString) },
   })
 });
 
@@ -30,6 +40,8 @@ const getEvent = {
     let one = null;
     if (isValidId(id)) {
       one = await EventModel.findById(id);
+    } else {
+      throw new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
     }
     if (!one) {
       console.warn("NotFound:", id);
@@ -39,7 +51,7 @@ const getEvent = {
 }
 
 const getEvents = {
-  type: new GraphQLList(EventType),
+  type: ResultType,
   description: "List of all events",
   args: {
     filter: { type: FilterEventType },
@@ -50,8 +62,7 @@ const getEvents = {
     const { filter, sortBy, paginate } = args || {};
     const filterCityId = filter && filter.cities_id || [];
     const filterCategoryId = filter && filter.categories_id || [];
-    const filterTagId = filter && filter.tags_id || [];
-
+    const filterTags = filter && filter.tags || [];
     const dateFrom = filter && filter.dateFrom;
     const dateTo = filter && filter.dateTo;
 
@@ -61,26 +72,25 @@ const getEvents = {
 
     filterCityId.length && filterObj.push({ city_id: {$in: filterCityId} });
     filterCategoryId.length && filterObj.push({ category_id: {$in: filterCategoryId} });
-    filterTagId.length && filterObj.push({ tags_id: {$in: filterTagId} });
+    filterTags.length && filterObj.push({ tags: {$in: filterTags} });
 
-    let skip = paginate && paginate.offset || 0;
-    let limit = paginate && paginate.limit;
+    const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
+    const total = await EventModel.countDocuments();
+    const offset = Math.min(paginate && paginate.offset || 0, total);
 
-    if (dateFrom && dateTo) {
-      limit = limit || Number.MAX_SAFE_INTEGER;
-    } else {
-      limit = Math.min(limit || MAX_SIZE, MAX_SIZE);
-    }
-
-    let events = await EventModel.find(
+    let list = await EventModel.find(
       filterObj.length ? { $and: filterObj } : {},
       null,
       {
         sort: { date: sortBy > 0 ? 1 : (sortBy < 0 ? -1 : 0) }
       })
-      .skip(skip)
+      .skip(offset)
       .limit(limit);
-    return events;
+    return {
+      list,
+      offset,
+      total
+    };
   }
 }
 

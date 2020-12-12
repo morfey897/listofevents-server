@@ -7,6 +7,8 @@ const Schema = mongoose.Schema;
 const eventSchema = new Schema(
   {
     date: Schema.Types.Date,
+    duration: Schema.Types.Number,
+
     url: Schema.Types.String,
     name: array2Obj(LANGS, Schema.Types.String),
     description: array2Obj(LANGS, Schema.Types.String),
