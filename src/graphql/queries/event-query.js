@@ -33,18 +33,18 @@ const FilterEventType = new GraphQLInputObjectType({
 const getEvent = {
   type: EventType,
   args: {
-    id: { type: GraphQLID }
+    id: { type: GraphQLID },
+    url: { type: GraphQLString }
   },
   description: "Single event by ID",
-  resolve: async function (_, { id }) {
+  resolve: async function (_, { id, url }) {
     let one = null;
-    if (isValidId(id)) {
+    if (id && isValidId(id)) {
       one = await EventModel.findById(id);
+    } else if (url) {
+      one = await EventModel.findOne({ url: url });
     } else {
       throw new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
-    }
-    if (!one) {
-      console.warn("NotFound:", id);
     }
     return one;
   }
@@ -70,9 +70,9 @@ const getEvents = {
     dateFrom && filterObj.push({ date: { $gte: dateFrom } });
     dateTo && filterObj.push({ date: { $lte: dateTo } });
 
-    filterCityId.length && filterObj.push({ city_id: {$in: filterCityId} });
-    filterCategoryId.length && filterObj.push({ category_id: {$in: filterCategoryId} });
-    filterTags.length && filterObj.push({ tags: {$in: filterTags} });
+    filterCityId.length && filterObj.push({ city_id: { $in: filterCityId } });
+    filterCategoryId.length && filterObj.push({ category_id: { $in: filterCategoryId } });
+    filterTags.length && filterObj.push({ tags: { $in: filterTags } });
 
     const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
     const total = await EventModel.countDocuments();

@@ -1,4 +1,4 @@
-const { GraphQLList, GraphQLID, GraphQLObjectType, GraphQLInt, GraphQLError } = require('graphql');
+const { GraphQLList, GraphQLID, GraphQLObjectType, GraphQLInt, GraphQLError, GraphQLString } = require('graphql');
 
 const CategoryModel = require('../../models/category-model');
 const CategoryType = require('../types/category-type');
@@ -10,7 +10,7 @@ const { ERRORCODES } = require('../../errors');
 const MAX_SIZE = 100;
 
 const findCategory = async (category) => {
-  const categoryModel = await CategoryModel.findOne(isValidId(category) ? { _id: category } : { $or: filterField(category, ['name'])});
+  const categoryModel = await CategoryModel.findOne(isValidId(category) ? { _id: category } : { $or: filterField(category, ['name']) });
   return categoryModel;
 }
 
@@ -26,20 +26,20 @@ const ResultType = new GraphQLObjectType({
 const getCategory = {
   type: CategoryType,
   args: {
-    id: { type: GraphQLID }
+    id: { type: GraphQLID },
+    url: { type: GraphQLString }
   },
   description: "Single category by ID",
-  resolve: async function (_, { id }) {
-    let category = null;
+  resolve: async function (_, { id, url }) {
+    let one = null;
     if (isValidId(id)) {
-      category = await CategoryModel.findById(id);
+      one = await CategoryModel.findById(id);
+    } else if (url) {
+      one = await CategoryModel.findOne({ url: url });
     } else {
       throw new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
     }
-    if (!category) {
-      console.warn("NotFound:", id);
-    }
-    return category;
+    return one;
   }
 }
 
@@ -61,7 +61,7 @@ const getCategories = {
     return {
       list,
       offset,
-      total 
+      total
     };
   }
 }

@@ -30,9 +30,6 @@ const getCity = {
     } else {
       throw new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
     }
-    if (!one) {
-      console.warn("NotFound:", id);
-    }
     return one;
   }
 }

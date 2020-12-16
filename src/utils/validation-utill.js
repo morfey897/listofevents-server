@@ -21,11 +21,11 @@ const _jsStringPrepare = (args, filter, func) => {
         for (let code in value) {
           let val = value[code];
           out[name][code] = typeof val === "string" ? func(val) : val;
-        }  
+        }
       } else if (typeof value === "string") {
-        out[name] = func(value);  
+        out[name] = func(value);
       } else {
-        out[name] = value;  
+        out[name] = value;
       }
     } else {
       out[name] = value;
