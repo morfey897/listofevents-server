@@ -6,6 +6,7 @@ const EventType = require('../types/event-type');
 
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
+const SortByType = require('../types/sortby-type');
 const { ERRORCODES } = require('../../errors');
 
 const MAX_SIZE = 100;
@@ -55,7 +56,7 @@ const getEvents = {
   description: "List of all events",
   args: {
     filter: { type: FilterEventType },
-    sortBy: { type: GraphQLInt },
+    sortBy: { type: SortByType },
     paginate: { type: PaginateType }
   },
   resolve: async function (_, args) {
@@ -82,7 +83,7 @@ const getEvents = {
       filterObj.length ? { $and: filterObj } : {},
       null,
       {
-        sort: { date: sortBy > 0 ? 1 : (sortBy < 0 ? -1 : 0) }
+        sort: sortBy ? { [sortBy.field]: sortBy.sort } : {}
       })
       .skip(offset)
       .limit(limit);
