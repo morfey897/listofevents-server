@@ -1,4 +1,4 @@
-const { GraphQLList, GraphQLID } = require('graphql');
+const { GraphQLList } = require('graphql');
 const { isValidId } = require('../../utils/validation-utill');
 
 const UserModel = require('../../models/user-model');
@@ -6,12 +6,13 @@ const UserType = require('../types/user-type');
 const PaginateType = require('../types/paginate-type');
 
 const { ROLES } = require("../../config");
+const { GraphQLString } = require('graphql');
 const MAX_SIZE = 100;
 
 const getUser = {
   type: UserType,
   args: {
-    id: { type: GraphQLID }
+    id: { type: GraphQLString }
   },
   description: "Single user by ID",
   resolve: async function (_, { id }, context) {

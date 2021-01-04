@@ -34,7 +34,7 @@ const FilterEventType = new GraphQLInputObjectType({
 const getEvent = {
   type: EventType,
   args: {
-    id: { type: GraphQLID },
+    id: { type: GraphQLString },
     url: { type: GraphQLString }
   },
   description: "Single event by ID",

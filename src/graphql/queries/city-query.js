@@ -5,6 +5,7 @@ const CityType = require('../types/city-type');
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
 const { ERRORCODES } = require('../../errors');
+const { GraphQLString } = require('graphql');
 
 const MAX_SIZE = 100;
 
@@ -20,7 +21,7 @@ const ResultType = new GraphQLObjectType({
 const getCity = {
   type: CityType,
   args: {
-    id: { type: GraphQLID }
+    id: { type: GraphQLString }
   },
   description: "Single city by ID",
   resolve: async function (_, { id }) {

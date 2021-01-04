@@ -1,13 +1,16 @@
 const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat, GraphQLError } = require('graphql')
 const shortid = require('shortid');
+const { GraphQLUpload } = require('graphql-upload');
 
 const CategoryModel = require('../../models/category-model');
+const ImageModel = require('../../models/image-model');
 const CategoryType = require('../types/category-type');
 
 const { isValidId, jsTrim, jsSanitize, isValidUrl, inlineArgs, isValidTag } = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
 const { ROLES } = require('../../config');
 const { ERRORCODES } = require('../../errors');
+const { uploadFileAWS } = require('../../utils/upload-utill');
 
 const createCategory = {
   type: CategoryType,
@@ -16,10 +19,10 @@ const createCategory = {
     name: { type: new GraphQLNonNull(TranslateInputType) },
     description: { type: new GraphQLNonNull(TranslateInputType) },
     tags: { type: new GraphQLList(GraphQLString) },
-    // images: { type: new GraphQLList(GraphQLString) },
+    images: { type: new GraphQLList(GraphQLUpload) },
   },
   resolve: async function (_, body, context) {
-    let { url, name, tags, description } = body;
+    let { url, name, tags, description, images } = body;
     const { user } = context;
 
     let error = null;
@@ -32,8 +35,21 @@ const createCategory = {
     } else {
       url += "-" + shortid.generate();
 
+      const fileResults = await Promise.allSettled(images.map(uploadFileAWS));
+
+      let filesComplete = [];
+      fileResults.forEach(({ value }) => {
+        if (value) {
+          filesComplete.push((new ImageModel({
+            url: value.path
+          })).save());
+        }
+      });
+
+      let imagesData = await Promise.allSettled(filesComplete);
+
       success = await (new CategoryModel({
-        images_id: [],
+        images_id: imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id),
         tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
         description: jsSanitize(description),
         ...jsTrim({ url, name })

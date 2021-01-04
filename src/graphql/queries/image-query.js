@@ -5,13 +5,14 @@ const ImageModel = require('../../models/image-model');
 const ImageType = require('../types/image-type');
 const FilterType = require('../types/filter-type');
 const PaginateType = require('../types/paginate-type');
+const { GraphQLString } = require('graphql');
 
 const MAX_SIZE = 100;
 
 const getImage = {
   type: ImageType,
   args: {
-    id: { type: GraphQLID }
+    id: { type: GraphQLString }
   },
   description: "Single image by ID",
   resolve: async function (_, { id }) {

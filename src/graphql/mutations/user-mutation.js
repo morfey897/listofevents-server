@@ -11,7 +11,7 @@ const { ERRORCODES } = require('../../errors');
 const updateUser = {
   type: UserType,
   args: {
-    id: { type: GraphQLID },
+    id: { type: GraphQLString },
     email: { type: GraphQLString },
     phone: { type: GraphQLString },
     password: { type: GraphQLString },
@@ -22,10 +22,10 @@ const updateUser = {
   },
   resolve: async function (_, { id, role, ...args }, context) {
     const { user } = context;
-
+    
     let success;
     let error;
-    if (!user || (ROLES.super_admin) !== ROLES.super_admin || (user.role & ROLES.admin) !== ROLES.admin || user.id !== id) {
+    if (!user || ((user.role & ROLES.super_admin) !== ROLES.super_admin && (user.role & ROLES.admin) !== ROLES.admin && user.id !== id)) {
       error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
     } else if (!isValidId(id)) {
       error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
@@ -48,7 +48,7 @@ const updateUser = {
 const deleteUser = {
   type: GraphQLFloat,
   args: {
-    ids: { type: new GraphQLList(GraphQLID) }
+    ids: { type: new GraphQLList(GraphQLString) }
   },
   resolve: async function (_, { ids }, context) {
     const { user } = context;

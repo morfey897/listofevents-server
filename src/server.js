@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require('cors');
 const { graphqlHTTP } = require("express-graphql");
+const { graphqlUploadExpress } = require('graphql-upload');
+
 const mongoose = require("mongoose");
 const AppSchema = require("./graphql");
 const { authenticateMiddleware, authenticateBasicMiddleware, authenticateBearerMiddleware } = require("./middlewares");
@@ -22,14 +24,16 @@ function start() {
   app.post("/oauth/signout", authenticateBearerMiddleware, signOutRouter);
   app.post("/oauth/signup", authenticateBasicMiddleware, signUpRouter);
   app.post("/oauth/outhcode", authenticateMiddleware, outhCodeRouter);
-  app.use("/api/graphql", authenticateMiddleware, graphqlHTTP({
-    schema: AppSchema,
-    graphiql: true,
-    customFormatErrorFn: (error) => {
-      console.log(error);
-      return getError(error.message);
-    }
-  })
+  app.use("/api/graphql", authenticateMiddleware,
+    graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }),
+    graphqlHTTP({
+      schema: AppSchema,
+      graphiql: true,
+      customFormatErrorFn: (error) => {
+        console.log(error);
+        return getError(error.message);
+      }
+    })
   );
 
   mongoose

@@ -1,8 +1,10 @@
 const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError, GraphQLInt } = require('graphql')
 const { GraphQLDateTime } = require('graphql-iso-date');
+const { GraphQLUpload } = require('graphql-upload');
 const shortid = require('shortid');
 
 const EventModel = require('../../models/event-model');
+const ImageModel = require('../../models/image-model');
 const CategoryModel = require('../../models/category-model');
 const CityModel = require('../../models/city-model');
 
@@ -14,6 +16,7 @@ const CoordsInputType = require('../inputs/coords-input-type');
 
 const { ROLES } = require('../../config');
 const { ERRORCODES } = require('../../errors');
+const { uploadFileAWS } = require('../../utils/upload-utill');
 
 const CityInputType = new GraphQLInputObjectType({
   name: 'CityInputType',
@@ -39,10 +42,11 @@ const createEvent = {
     tags: { type: new GraphQLList(GraphQLString) },
     category_id: { type: new GraphQLNonNull(GraphQLString) },
     city: { type: new GraphQLNonNull(CityInputType) },
-    // images: { type: new GraphQLList(GraphQLString) },
+    images: { type: new GraphQLList(GraphQLUpload) },
   },
   resolve: async function (_, body, context) {
-    let { url, city, category_id, tags, description, location, date, time, duration, name } = body;
+    let { url, city, category_id, tags, description, location, date, time, duration, name, images } = body;
+
     const { user } = context;
 
     let error = null;
@@ -81,8 +85,20 @@ const createEvent = {
         } else {
           url += "-" + shortid.generate();
 
+          const fileResults = await Promise.allSettled(images.map(uploadFileAWS));
+
+          let filesComplete = [];
+          fileResults.forEach(({ value }) => {
+            if (value) {
+              filesComplete.push((new ImageModel({
+                url: value.path
+              })).save());
+            }
+          });
+
+          let imagesData = await Promise.allSettled(filesComplete);
           success = await (new EventModel({
-            images_id: [],
+            images_id: imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id),
             tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
             description: jsSanitize(description),
             created_at: Date.now(),

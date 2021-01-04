@@ -26,7 +26,7 @@ const ResultType = new GraphQLObjectType({
 const getCategory = {
   type: CategoryType,
   args: {
-    id: { type: GraphQLID },
+    id: { type: GraphQLString },
     url: { type: GraphQLString }
   },
   description: "Single category by ID",
