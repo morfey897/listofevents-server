@@ -46,7 +46,7 @@ const updateUser = {
 }
 
 const deleteUser = {
-  type: GraphQLFloat,
+  type: GraphQLInt,
   args: {
     ids: { type: new GraphQLList(GraphQLString) }
   },

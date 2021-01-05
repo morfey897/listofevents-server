@@ -1,4 +1,4 @@
-const { GraphQLList, GraphQLID, GraphQLString, GraphQLInt, GraphQLInputObjectType, GraphQLError, GraphQLObjectType } = require('graphql');
+const { GraphQLList, GraphQLString, GraphQLInt, GraphQLInputObjectType, GraphQLError, GraphQLObjectType } = require('graphql');
 const { GraphQLDate } = require('graphql-iso-date');
 
 const EventModel = require('../../models/event-model');
@@ -76,7 +76,7 @@ const getEvents = {
     filterTags.length && filterObj.push({ tags: { $in: filterTags } });
 
     const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
-    const total = await EventModel.countDocuments();
+    const total = await EventModel.countDocuments(filterObj.length ? { $and: filterObj } : {});
     const offset = Math.min(paginate && paginate.offset || 0, total);
 
     let list = await EventModel.find(

@@ -47,16 +47,24 @@ const getCategories = {
   type: ResultType,
   description: "List of all categories",
   args: {
+    ids: { type: new GraphQLList(GraphQLString) },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const { paginate } = args || {};
-    const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
+    const { paginate, ids } = args || {};
+    let idList = ids && ids.filter(id => isValidId(id)) || [];
+    let list = [];
+    let offset = 0;
     const total = await CategoryModel.countDocuments();
-    const offset = Math.min(paginate && paginate.offset || 0, total);
-    let list = await CategoryModel.find({})
-      .skip(offset)
-      .limit(limit);
+    if (idList.length) {
+      list = await CategoryModel.find({ '_id': { $in: idList } });
+    } else {
+      const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
+      offset = Math.min(paginate && paginate.offset || 0, total);
+      list = await CategoryModel.find({})
+        .skip(offset)
+        .limit(limit);
+    }
 
     return {
       list,

@@ -1,4 +1,4 @@
-const { GraphQLString, GraphQLFloat, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError, GraphQLInt } = require('graphql')
+const { GraphQLString, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError, GraphQLInt } = require('graphql')
 const { GraphQLDateTime } = require('graphql-iso-date');
 const { GraphQLUpload } = require('graphql-upload');
 const shortid = require('shortid');
@@ -12,7 +12,6 @@ const EventType = require('../types/event-type');
 
 const { isValidId, inlineArgs, jsTrim, isValidUrl, jsSanitize, isValidTag } = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
-const CoordsInputType = require('../inputs/coords-input-type');
 
 const { ROLES } = require('../../config');
 const { ERRORCODES } = require('../../errors');
@@ -45,7 +44,7 @@ const createEvent = {
     images: { type: new GraphQLList(GraphQLUpload) },
   },
   resolve: async function (_, body, context) {
-    let { url, city, category_id, tags, description, location, date, time, duration, name, images } = body;
+    let { url, city, category_id, tags, description, location, date, duration, name, images } = body;
 
     const { user } = context;
 
@@ -104,7 +103,6 @@ const createEvent = {
             created_at: Date.now(),
             updated_at: Date.now(),
             date,
-            time,
             duration,
             city_id: cityModel._id,
             category_id: categoryModel._id,
@@ -126,78 +124,129 @@ const createEvent = {
 const updateEvent = {
   type: EventType,
   args: {
-    id: { type: new GraphQLNonNull(GraphQLString) },
-    date: { type: GraphQLDateTime },
+    _id: { type: new GraphQLNonNull(GraphQLString) },
 
-    url: { type: TranslateInputType },
-    name: { type: TranslateInputType },
-    description: { type: TranslateInputType },
-    place: { type: TranslateInputType },
-    coords: { type: CoordsInputType },
-
+    date: { type: new GraphQLNonNull(GraphQLDateTime) },
+    duration: { type: new GraphQLNonNull(GraphQLInt) },
+    url: { type: new GraphQLNonNull(GraphQLString) },
+    name: { type: new GraphQLNonNull(TranslateInputType) },
+    description: { type: new GraphQLNonNull(TranslateInputType) },
+    location: { type: new GraphQLNonNull(TranslateInputType) },
     tags: { type: new GraphQLList(GraphQLString) },
+    category_id: { type: new GraphQLNonNull(GraphQLString) },
+    city: { type: new GraphQLNonNull(CityInputType) },
+    images: { type: new GraphQLList(GraphQLString) },
 
-    city: { type: GraphQLString },
-    category: { type: GraphQLString },
-  },
-  resolve: async function (_, { id, city, category, tags, ...args }) {
-    let updateEventInfo;
-    if (isValidId(id)) {
-      // if (tags && tags.length) {
-      //   tags = await addTags(tags);
-      // }
-
-      // if (city) {
-      //   let cityModel = await findCity(city);
-      //   if (cityModel) {
-      //     args = Object.assign({}, args, { city_id: cityModel._id.toString() });
-      //   }
-      // }
-
-      // if (category) {
-      //   let categoryModel = await findCity(category);
-      //   if (categoryModel) {
-      //     args = Object.assign({}, args, { category_id: categoryModel._id.toString() });
-      //   }
-      // }
-      if (!isValidUrl(args.url)) {
-        args.url = "";
-      } else {
-        args.url += "-" + shortid.generate();
-      }
-
-      updateEventInfo = await EventModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, { name: true, url: true })) }, { new: true });
-    }
-
-    if (!updateEventInfo) {
-      console.warn('Update:', id, args);
-    }
-    return updateEventInfo;
-  }
-}
-
-const deleteEvents = {
-  type: GraphQLFloat,
-  args: {
-    ids: { type: new GraphQLList(GraphQLID) }
+    add_images: { type: new GraphQLList(GraphQLUpload) },
   },
   resolve: async function (_, body, context) {
-    let { ids } = body;
+    let { _id, url, city, category_id, tags, description, location, date, duration, name, images, add_images } = body;
+    let city_id = "";
+
     const { user } = context;
-    ids = ids && ids.filter(id => isValidId(id)) || [];
-    if (ids.length) {
-      if (user && (user.role & ROLES.admin) === ROLES.admin) {
-        let deleteInfo = await EventModel.deleteMany({ _id: { $in: ids } });
-        return deleteInfo.deletedCount;
-      } else if (user) {
-        let deleteInfo = await EventModel.deleteMany({ $and: [{ _id: { $in: ids } }, { author_id: user.id }] });
-        return deleteInfo.deletedCount;
+
+    let error = null;
+    let success = null;
+
+    if (!isValidId(_id)) {
+      error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
+    } else {
+      let eventModel = await EventModel.findOne({ _id });
+      if (!user || !eventModel || ((user.role & ROLES.moderator) !== ROLES.moderator && eventModel.author_id != user.id)) {
+        error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
       } else {
-        throw new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+        if (!isValidUrl(url) || eventModel.url == url) {
+          url = "";
+        } else {
+          let checkSID = url.split("-");
+          if (shortid.isValid(checkSID[checkSID.length - 1])) {
+            url = url.replace("-" + checkSID[checkSID.length - 1], "");
+          }
+          url += "-" + shortid.generate();
+        }
+
+        //Check category
+        let categoryModel = null;
+        if (isValidId(category_id)) {
+          categoryModel = await CategoryModel.findOne({ _id: category_id });
+        }
+        if (!categoryModel) {
+          category_id = "";
+        }
+
+        let cityModel = null;
+        if (isValidId(city._id)) {
+          cityModel = await CityModel.findOne({ _id: city._id });
+        } else {
+          cityModel = await CityModel.findOne({ place_id: city.place_id });
+          if (!cityModel) {
+            cityModel = await (new CityModel({
+              place_id: city.place_id,
+              ...jsTrim({ name: city.name, description: city.description }),
+            })).save();
+          } else {
+            cityModel = await CityModel.findOneAndUpdate({ _id: cityModel._id }, { $set: inlineArgs(jsTrim({ name: city.name, description: city.description })) }, { new: true });
+          }
+        }
+        city_id = cityModel ? String(cityModel._id) : "";
+
+        const fileResults = await Promise.allSettled(add_images.map(uploadFileAWS));
+
+        let filesComplete = [];
+        fileResults.forEach(({ value }) => {
+          if (value) {
+            filesComplete.push((new ImageModel({
+              url: value.path
+            })).save());
+          }
+        });
+
+        let imagesData = await Promise.allSettled(filesComplete);
+
+        let args = {
+          images_id: [...images].concat(imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id)),
+          tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
+          description: jsSanitize(description),
+          updated_at: Date.now(),
+          date,
+          duration,
+          city_id,
+          category_id,
+          ...jsTrim({ url, name, location }),
+        };
+        success = await EventModel.findOneAndUpdate({ _id }, { $set: inlineArgs(args) }, { new: true });
       }
     }
-    return 0;
+
+    if (!success) {
+      throw (error || new GraphQLError(ERRORCODES.ERROR_WRONG));
+    }
+
+    return success;
   }
 }
 
-module.exports = { graphql: { createEvent, updateEvent, deleteEvents } }
+const deleteEvent = {
+  type: GraphQLInt,
+  args: {
+    ids: { type: new GraphQLList(GraphQLString) }
+  },
+  resolve: async function (_, { ids }, context) {
+    const { user } = context;
+    ids = ids && ids.filter(id => isValidId(id)) || [];
+    if (!ids.length) return 0;
+    if (user && (user.role & ROLES.admin) === ROLES.admin) {
+      let deleteInfo = await EventModel.deleteMany({ _id: { $in: ids } });
+      return deleteInfo.deletedCount;
+    } else if (user) {
+      let deleteInfo = await EventModel.deleteMany({ $and: [{ _id: { $in: ids } }, { author_id: user.id }] });
+      return deleteInfo.deletedCount;
+    } 
+    
+    throw new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+  }
+}
+
+module.exports = { 
+  graphql: { createEvent, updateEvent, deleteEvent } 
+};
