@@ -6,7 +6,7 @@ const { graphqlUploadExpress } = require('graphql-upload');
 const mongoose = require("mongoose");
 const AppSchema = require("./graphql");
 const { authenticateMiddleware, authenticateBasicMiddleware, authenticateBearerMiddleware } = require("./middlewares");
-const { signInRouter, signOutRouter, signUpRouter, outhCodeRouter, renameRouter, configRouter } = require("./routers");
+const { signInRouter, signOutRouter, signUpRouter, outhCodeRouter, renameRouter, configRouter, facebookRouter } = require("./routers");
 
 const { getError } = require("./errors");
 
@@ -19,11 +19,15 @@ function start() {
   app.use(express.json());
 
   app.use("/api/config", authenticateMiddleware, configRouter);
-  app.post("/oauth/signin", authenticateBasicMiddleware, signInRouter);
   app.post("/oauth/rename", authenticateBearerMiddleware, renameRouter);
+  app.post("/oauth/outhcode", authenticateMiddleware, outhCodeRouter);
+
+  app.post("/oauth/signin", authenticateBasicMiddleware, signInRouter);
   app.post("/oauth/signout", authenticateBearerMiddleware, signOutRouter);
   app.post("/oauth/signup", authenticateBasicMiddleware, signUpRouter);
-  app.post("/oauth/outhcode", authenticateMiddleware, outhCodeRouter);
+  
+  app.use("/oauth/fb", facebookRouter);
+
   app.use("/api/graphql", authenticateMiddleware,
     graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }),
     graphqlHTTP({
@@ -38,7 +42,9 @@ function start() {
 
   mongoose
     .connect(mongoUri, mongoOptions)
-    .then(() => app.listen(process.env.SERVER_PORT, console.log("Server is listening " + process.env.SERVER_PORT + " port.")))
+    .then(() => app.listen(process.env.SERVER_PORT, () => {
+      console.log("Server is listening " + process.env.SERVER_PORT + " port.");
+    }))
     .catch(error => {
       console.log(error);
     })

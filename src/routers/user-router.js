@@ -1,10 +1,14 @@
 const jwt = require("jsonwebtoken");
+const { transliterate } = require('inflected');
 const Users = require("../models/user-model");
 const AuthCodes = require("../models/authcode-model");
 const { jsTrim, inlineArgs } = require('../utils/validation-utill');
 const { ROLES } = require("../config");
 const ms = require("ms");
 const { ERRORCODES, getError } = require("../errors");
+const { sendEmail } = require("../services/email-service");
+const { sendSMS } = require("../services/sms-service");
+const i18n = require("../services/i18n-service");
 
 const EMAIL_REG_EXP = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const PHONE_REG_EXP = /^\+?\d{10,}$/;
@@ -53,8 +57,19 @@ function outhCodeRouter(req, res) {
         if (authcode === undefined) return;
         res.json({ success: true, data: { type, lifetime: parseInt(lifetime / 1000), username: usernameNew, codeLen } });
         if (type === TYPE_EMAIL) {
+          sendEmail({
+            from: i18n.__("auth_code_from"),
+            to: username,
+            subject: i18n.__("auth_code_subject"),
+            text: i18n.__("auth_code_text", { code: authcode.code }),
+            html: i18n.__("auth_code_html", { code: authcode.code }),
+          }, "no_reply");
           console.log("You code in email: ", authcode.code);
         } else {
+          sendSMS({
+            to: username,
+            message: transliterate(i18n.__("auth_code_text", { code: authcode.code }))
+          });
           console.log("You code in phone: ", authcode.code);
         }
       })
@@ -106,6 +121,12 @@ function signInRouter(req, res) {
     .catch(() => {
       res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_NOT_EXIST) });
     });
+}
+
+function facebookRouter(req, res) {
+  const body = req.body;
+  console.log("SIGN_IN_FB", body);
+  res.json({ success: true });
 }
 
 function renameRouter(req, res) {
@@ -176,4 +197,6 @@ module.exports = {
   signUpRouter,
   renameRouter,
   outhCodeRouter,
+
+  facebookRouter
 };

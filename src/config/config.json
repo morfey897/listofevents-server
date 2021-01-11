@@ -1,5 +1,8 @@
 {
-  "LANGS": ["ru", "en"],
+  "LANGS": ["ru"],
+  "APPS": {
+    "facebook": "437805930905669"
+  },
   "ROLES": {
     "guest": 0,
     "user": 2,

@@ -1,0 +1,6 @@
+{
+	"auth_code_from": "PDEvents",
+	"auth_code_subject": "Код доступа для PDEvents.com.ua",
+	"auth_code_html": "<b>Привет!<b><br>Это ваш код доступа<br><b>{{code}}</b>",
+	"auth_code_text": "Привет! Это ваш код доступа: {{code}}"
+}
