@@ -1,7 +1,11 @@
 {
-  "LANGS": ["ru"],
+  "LANGS": [
+    "ru"
+  ],
   "APPS": {
-    "facebook": "437805930905669"
+    "facebook": {
+      "appId": "437805930905669", "state": "development"
+    }
   },
   "ROLES": {
     "guest": 0,
