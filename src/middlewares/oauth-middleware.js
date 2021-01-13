@@ -6,7 +6,7 @@ function authenticateBasicMiddleware(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const [type, token] = authHeader.split(' ');
   if ((type === "Basic" || type === "basic") && token === basicAuth) {
-    req.user = { id: 0, role: ROLES.guest };
+    req.user = { _id: 0, role: ROLES.guest };
     next();
   } else {
     res.sendStatus(401);
@@ -38,7 +38,7 @@ function authenticateMiddleware(req, res, next) {
     const [type, token] = authHeader.split(' ');
     if (type === "Basic" || type === "basic") {
       if (token === basicAuth) {
-        req.user = { id: 0, role: ROLES.guest };
+        req.user = { _id: 0, role: ROLES.guest };
         next();
       } else {
         res.sendStatus(401);

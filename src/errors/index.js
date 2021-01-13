@@ -40,6 +40,10 @@ const ERROR_CITY_NOT_EXIST = {
   errorCode: 110,
   error: "City isn't exist"
 };
+const ERROR_CAN_NOT_CONNECT_SOCIAL = {
+  errorCode: 111,
+  error: "Can't tonnect to social network"
+};
 
 const ERROR_EMPTY = {
   errorCode: 901,
@@ -73,7 +77,8 @@ const ERRORCODES_MAP = {
   ERROR_INCORRECT_ID,
   ERROR_INCORRECT_USERNAME,
   ERROR_CATEGORY_NOT_EXIST,
-  ERROR_CITY_NOT_EXIST
+  ERROR_CITY_NOT_EXIST,
+  ERROR_CAN_NOT_CONNECT_SOCIAL
 };
 
 const ERRORCODES = Object.keys(ERRORCODES_MAP).reduce((prev, cur) => {
