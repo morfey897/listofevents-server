@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const { array2Obj } = require("../utils/array-utill");
 
-const SOCIAL_FIELDS = ["id", "link", "auth_token"];
+const SOCIAL_FIELDS = ["id", "link", "access_token"];
 
 const Schema = mongoose.Schema
 const userSchema = new Schema(

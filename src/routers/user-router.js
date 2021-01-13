@@ -86,8 +86,8 @@ function signUpRouter(req, res) {
   const names = (name || "").trim().split(/\s+/);
 
   if (type == TYPE_FACEBOOK || type == TYPE_INSTAGRAM) {
-    const { id, link, auth_token } = req.body;
-    if (!id || !link || !auth_token) {
+    const { id, link, access_token } = req.body;
+    if (!id || !link || !access_token) {
       res.json({ success: false, ...getError(ERRORCODES.ERROR_CAN_NOT_CONNECT_SOCIAL) });
     } else {
       const email = prepareUsername(req.body.email);
@@ -104,7 +104,7 @@ function signUpRouter(req, res) {
         .then(user => {
           if (!user) {
             return (new Users({
-              facebook: { id, link, auth_token },
+              facebook: { id, link, access_token },
               name: names[0] || "", surname: names[0] || "",
               role: ROLES.user,
               email, phone,
@@ -218,13 +218,13 @@ function renameRouter(req, res) {
         })
     }
   } else if (facebook || instagram) {
-    const { id, link, auth_token } = (facebook || instagram);
-    if (id && link && auth_token) {
+    const { id, link, access_token } = (facebook || instagram);
+    if (id && link && access_token) {
       let args = {};
       if (facebook) {
-        args = inlineArgs({ facebook: { id, link, auth_token } });
+        args = inlineArgs({ facebook: { id, link, access_token } });
       } else if (instagram) {
-        args = inlineArgs({ instagram: { id, link, auth_token } });
+        args = inlineArgs({ instagram: { id, link, access_token } });
       }
       Users.findOneAndUpdate({ _id: currentUserId }, { $set: args }, { new: true }).exec()
         .then(user => {
