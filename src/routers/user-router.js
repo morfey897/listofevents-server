@@ -249,6 +249,12 @@ function signInFacebook(req, res) {
   console.log("REQ_QUERY:", req.query);
 
   const { code, state } = req.query;
+
+  axios.interceptors.request.use(request => {
+    console.log('Starting Request', JSON.stringify(request))
+    return request
+  })
+
   axios({
     url: 'https://graph.facebook.com/v9.0/oauth/access_token',
     method: 'get',
