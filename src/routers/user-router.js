@@ -109,7 +109,6 @@ function signUpRouter(req, res) {
           if (phone) {
             conditions.push({ phone });
           }
-          console.log("FIND by: ", conditions);
           Users.find({ $or: conditions }).exec()
             .then(users => {
               const user = users.find(user => user[type].id === userData.id);
@@ -315,22 +314,18 @@ function signInFacebook(req, res) {
 }
 
 function deletionFacebook(req, res) {
-  console.log("REQUEST_TO_DELETE", req.body);
   const signed_request = req.body["signed_request"];
-  console.log("signed_request", signed_request);
   if (signed_request) {
     try {
       const { user_id } = facebookSignedRequest(signed_request, process.env.FACEBOOK_APP_SECRET);
       const confirmCode = shortid.generate();
 
       const conditions = { [`${TYPE_FACEBOOK}.id`]: user_id };
-      console.log("FIND_DELETE", conditions);
       Users.findOne(conditions).exec()
         .then(user => {
-          console.log("FINDED", user);
           if (!user) {
             res.sendStatus(400);
-          } else if (!user[TYPE_INSTAGRAM].id && !user.email && !user.phone && !user.password) {
+          } else if (!user[TYPE_INSTAGRAM].id && !user.password) {
             Users.deleteMany({ _id: user._id })
               .then(({ deletedCount }) => {
                 if (deletedCount > 0) {
