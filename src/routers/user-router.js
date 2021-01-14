@@ -112,17 +112,14 @@ function signUpRouter(req, res) {
           console.log("FIND by: ", conditions);
           Users.find({ $or: conditions }).exec()
             .then(users => {
-              console.log("FINDONE", users);
-
-              const user = users && users[0];
-              if (!user || user[type].id != userData.id) {
-                console.log("CHECK", user ? user[type].id : null, userData.id);
+              const user = users.find(user => user[type].id === userData.id);
+              if (!user) {
                 return (new Users({
                   [type]: { id: userData.id, link: userData.link, access_token: userData.access_token },
                   name: userData.first_name || "", surname: userData.last_name || "",
                   role: ROLES.user,
-                  email: user && user.email == email ? "" : email,
-                  phone: user && user.phone == phone ? "" : phone,
+                  email: email && users.find(user => user.email === email) ? "" : email,
+                  phone: phone && users.find(user => user.phone === phone) ? "" : phone,
                   password: ""
                 })).save();
               }
@@ -318,8 +315,9 @@ function signInFacebook(req, res) {
 }
 
 function deletionFacebook(req, res) {
-  console.log("REQUEST_TO_DELETE");
-  const { signed_request } = req.body;
+  console.log("REQUEST_TO_DELETE", req.body);
+  const signed_request = req.body["signed_request"];
+  console.log("signed_request", signed_request);
   if (signed_request) {
     try {
       const { user_id } = facebookSignedRequest(signed_request, process.env.FACEBOOK_APP_SECRET);
