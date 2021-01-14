@@ -110,9 +110,11 @@ function signUpRouter(req, res) {
             conditions.push({ phone });
           }
           console.log("FIND by: ", conditions);
-          Users.findOne({ $or: conditions }).exec()
-            .then(user => {
-              console.log("FINDONE", user);
+          Users.find({ $or: conditions }).exec()
+            .then(users => {
+              console.log("FINDONE", users);
+
+              const user = users && users[0];
               if (!user || user[type].id != userData.id) {
                 console.log("CHECK", user ? user[type].id : null, userData.id);
                 return (new Users({
@@ -316,6 +318,7 @@ function signInFacebook(req, res) {
 }
 
 function deletionFacebook(req, res) {
+  console.log("REQUEST_TO_DELETE");
   const { signed_request } = req.body;
   if (signed_request) {
     try {
