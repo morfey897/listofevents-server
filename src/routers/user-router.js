@@ -36,10 +36,10 @@ function prepareUsername(username, type) {
 }
 
 function generate(user) {
-  if (!user) return { token: { accessToken: "", expiresIn: 0 }, user: { _id: 0, role: 0 } };
+  if (!user) return { token: { accessToken: "", expiresIn: 0 }, user: { _id: 0, role: 0, name: "", surname: "", email: "", phone: "", facebook: {}, instagram: {} } };
   const accessToken = jwt.sign({ _id: user._id, role: user.role }, process.env.TOKEN_SECRET, { expiresIn: process.env.TOKEN_LIFETIME });
   const decoded = jwt.decode(accessToken);
-  return { token: { accessToken, expiresIn: decoded.exp }, user: { ...user, password: "*****" } };
+  return { token: { accessToken, expiresIn: decoded.exp }, user: { _id: user._id, name: user.name, surname: user.surname, role: user.role, email: user.email, phone: user.phone, facebook: user.facebook, instagram: user.instagram } };
 }
 
 function outhCodeRouter(req, res) {
@@ -105,7 +105,7 @@ function signUpRouter(req, res) {
           if (!user) {
             return (new Users({
               facebook: { id, link, access_token },
-              name: names[0] || "", surname: names[0] || "",
+              name: names[0] || "", surname: names[1] || "",
               role: ROLES.user,
               email, phone,
               password: ""
