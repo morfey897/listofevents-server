@@ -12,7 +12,6 @@ const { sendSMS } = require("../services/sms-service");
 const i18n = require("../services/i18n-service");
 const { APPS } = require('../config');
 
-
 // eslint-disable-next-line no-useless-escape
 const EMAIL_REG_EXP = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
 const PHONE_REG_EXP = /^\+?\d{10,}$/;
@@ -21,6 +20,8 @@ const TYPE_EMAIL = "email";
 const TYPE_PHONE = "phone";
 const TYPE_FACEBOOK = "facebook";
 const TYPE_INSTAGRAM = "instagram";
+
+const SOCIAL_PROMISES = {};
 
 function getUsernameType(username) {
   if (EMAIL_REG_EXP.test((username || "").trim())) {
@@ -85,49 +86,65 @@ function outhCodeRouter(req, res) {
 }
 
 function signUpRouter(req, res) {
-  const { type, name } = req.body;
-  const names = (name || "").trim().split(/\s+/);
+  const { type } = req.body;
 
   if (type == TYPE_FACEBOOK || type == TYPE_INSTAGRAM) {
-    const { id, link, access_token } = req.body;
-    if (!id || !link || !access_token) {
+    const { state } = req.body;
+    if (!state) {
       res.json({ success: false, ...getError(ERRORCODES.ERROR_CAN_NOT_CONNECT_SOCIAL) });
     } else {
-      const email = prepareUsername(req.body.email);
-      const phone = prepareUsername(req.body.phone);
-      const conditions = [];
-      conditions.push({ [`${type}.id`]: id });
-      if (email) {
-        conditions.push({ email });
-      }
-      if (phone) {
-        conditions.push({ phone });
-      }
-      Users.findOne({ $or: conditions }).exec()
-        .then(user => {
-          if (!user) {
-            return (new Users({
-              facebook: { id, link, access_token },
-              name: names[0] || "", surname: names[1] || "",
-              role: ROLES.user,
-              email, phone,
-              password: ""
-            })).save();
+      const callBackFunction = (success, userData) => {
+        console.log("CALLBACK", success, userData);
+        if (!success) {
+          res.json({ success: false, ...getError(ERRORCODES.ERROR_CAN_NOT_CONNECT_SOCIAL) });
+        } else {
+          const email = prepareUsername(userData.email);
+          const phone = prepareUsername(userData.phone);
+          const conditions = [];
+          conditions.push({ [`${type}.id`]: userData.id });
+          if (email) {
+            conditions.push({ email });
           }
-          if (user[type].id != id) {
-            throw new Error("Not exist");
+          if (phone) {
+            conditions.push({ phone });
           }
-          return user;
-        })
-        .then(user => {
-          res.json({ success: true, data: generate(user) });
-        })
-        .catch(() => {
-          res.json({ success: false, ...getError(email ? ERRORCODES.ERROR_EXIST_EMAIL : (phone ? ERRORCODES.ERROR_EXIST_PHONE : ERRORCODES.ERROR_USER_EXIST)) });
-        })
+          Users.findOne({ $or: conditions }).exec()
+            .then(user => {
+              if (!user) {
+                return (new Users({
+                  [type]: { id: userData.id, link: userData.link, access_token: userData.access_token },
+                  name: userData.first_name || "", surname: userData.last_name || "",
+                  role: ROLES.user,
+                  email, phone,
+                  password: ""
+                })).save();
+              }
+              if (user[type].id != userData.id) {
+                throw new Error("Not exist");
+              }
+              return user;
+            })
+            .then(user => {
+              res.json({ success: true, data: generate(user) });
+            })
+            .catch(() => {
+              res.json({ success: false, ...getError(email ? ERRORCODES.ERROR_EXIST_EMAIL : (phone ? ERRORCODES.ERROR_EXIST_PHONE : ERRORCODES.ERROR_USER_EXIST)) });
+            })
+        }
+      }
+      if (SOCIAL_PROMISES[state] instanceof Promise) {
+        SOCIAL_PROMISES[state]
+          .then(callBackFunction)
+          .then(() => {
+            delete SOCIAL_PROMISES[state];
+          })
+      } else {
+        SOCIAL_PROMISES[state] = callBackFunction;
+      }
     }
   } else {
-    const { password, code, username } = req.body;
+    const { password, code, username, name } = req.body;
+    const names = (name || "").trim().split(/\s+/);
     const type = getUsernameType(username);
     if (type != TYPE_EMAIL && type != TYPE_PHONE) {
       res.json({ success: false, ...getError(ERRORCODES.ERROR_INCORRECT_USERNAME) });
@@ -249,33 +266,41 @@ function signInFacebook(req, res) {
   console.log("REQ_QUERY:", req.query);
 
   const { code, state } = req.query;
-  // axios.interceptors.request.use(request => {
-  //   console.log('Starting Request', JSON.stringify(request))
-  //   return request
-  // })
-  axios({
-    url: 'https://graph.facebook.com/v9.0/oauth/access_token',
-    method: 'get',
-    params: {
-      client_id: APPS.facebook.appId,
-      client_secret: process.env.FACEBOOK_APP_SECRET,
-      redirect_uri: `${process.env.HOST}/oauth/signin-facebook`,
-      code,
-    },
-  }).then(({ data }) => {
-    return axios({
-      url: 'https://graph.facebook.com/me',
+
+  const promise = new Promise((res) => {
+    axios({
+      url: 'https://graph.facebook.com/v9.0/oauth/access_token',
       method: 'get',
       params: {
-        fields: ['id', 'email', 'first_name', 'last_name'].concat(APPS.facebook.state === "production" ? "user_link" : "").filter(a => !!a).join(","),
-        access_token: data.access_token,
+        client_id: APPS.facebook.appId,
+        client_secret: process.env.FACEBOOK_APP_SECRET,
+        redirect_uri: `${process.env.HOST}/oauth/signin-facebook`,
+        code,
       },
+    }).then(({ data }) => Promise.allSettled([
+      axios({
+        url: 'https://graph.facebook.com/me',
+        method: 'get',
+        params: {
+          fields: ['id', 'email', 'first_name', 'last_name'].concat(APPS.facebook.state === "production" ? "user_link" : "").filter(a => !!a).join(","),
+          access_token: data.access_token,
+        },
+      }),
+      Promise.resolve({ access_token: data.access_token })
+    ])).then(([{ data }, { access_token }]) => {
+      console.log(data, access_token);
+      res({ success: true, user: { id: data.id, access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.facebook.com" } });
+    }).catch(() => {
+      res({ success: false });
     });
-  }).then(({ data }) => {
-    console.log("ME!!!", data);
-  }).catch(e => {
-    console.log("ERROR!!!", e);
   });
+
+  if (typeof SOCIAL_PROMISES[state] === "function") {
+    promise.then(SOCIAL_PROMISES[state])
+  } else {
+    SOCIAL_PROMISES[state] = promise;
+  }
+
 
   res.send(`<!DOCTYPE html>
   <html>
