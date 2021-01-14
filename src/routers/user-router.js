@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const axios = require('axios').default;
 const { transliterate } = require('inflected');
 const Users = require("../models/user-model");
 const AuthCodes = require("../models/authcode-model");
@@ -9,6 +10,8 @@ const { ERRORCODES, getError } = require("../errors");
 const { sendEmail } = require("../services/email-service");
 const { sendSMS } = require("../services/sms-service");
 const i18n = require("../services/i18n-service");
+const { APPS } = require('../config');
+
 
 // eslint-disable-next-line no-useless-escape
 const EMAIL_REG_EXP = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -244,6 +247,21 @@ function signOutRouter(req, res) {
 function signInFacebook(req, res) {
   console.log("REQ_BODY:", req.body);
   console.log("REQ_QUERY:", req.query);
+
+  const { code, state } = req.query;
+  axios({
+    url: 'https://graph.facebook.com/v9.0/oauth/access_token',
+    method: 'get',
+    params: {
+      client_id: APPS.facebook.appId,
+      client_secret: process.env.FACEBOOK_APP_SECRET,
+      redirect_uri: `${process.env.HOST}/oauth/signin-facebook`,
+      code,
+    },
+  }).then(({ data }) => {
+    console.log("ACCESS_TOKEN", data.access_token);
+  });
+
   res.send(`<!DOCTYPE html>
   <html>
   <head>
