@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const axios = require('axios').default;
 const { transliterate } = require('inflected');
+const shortid = require('shortid');
 const Users = require("../models/user-model");
 const AuthCodes = require("../models/authcode-model");
 const { jsTrim, inlineArgs } = require('../utils/validation-utill');
@@ -11,6 +12,7 @@ const { sendEmail } = require("../services/email-service");
 const { sendSMS } = require("../services/sms-service");
 const i18n = require("../services/i18n-service");
 const { APPS } = require('../config');
+const { facebookSignedRequest } = require("../services/parse-signed-request");
 
 // eslint-disable-next-line no-useless-escape
 const EMAIL_REG_EXP = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -311,6 +313,15 @@ function signInFacebook(req, res) {
   <html>`);
 }
 
+function deletionFacebook(req, res) {
+  console.log("QUERY", req.query);
+  console.log("BODY", req.body);
+  const data = facebookSignedRequest(req.body["signed_request"], process.env.FACEBOOK_APP_SECRET);
+  console.log("DATA", data);
+  const confirmCode = shortid.generate();
+  res.json({ 'url': `${process.env.HOST}/oauth/deletion-facebook?id=${confirmCode}`, 'confirmation_code': confirmCode });
+}
+
 module.exports = {
   signInRouter,
   signOutRouter,
@@ -318,5 +329,6 @@ module.exports = {
   renameRouter,
   outhCodeRouter,
 
-  signInFacebook
+  signInFacebook,
+  deletionFacebook
 };
