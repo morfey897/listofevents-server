@@ -16,10 +16,9 @@ function start() {
   const mongoOptions = { useNewUrlParser: true, useUnifiedTopology: true, useFindAndModify: false, }
   const app = express();
 
-  const urlencodedParser = bodyParser.urlencoded({ extended: false })
-
   app.use(cors());
   app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: false }));
 
   app.use("/api/config", authenticateMiddleware, configRouter);
   app.post("/oauth/rename", authenticateBearerMiddleware, renameRouter);
@@ -29,7 +28,7 @@ function start() {
   app.post("/oauth/signout", authenticateBearerMiddleware, signOutRouter);
   app.post("/oauth/signup", authenticateBasicMiddleware, signUpRouter);
   app.use("/oauth/signin-facebook", signInFacebook);
-  app.use("/oauth/deletion-facebook", urlencodedParser, deletionFacebook);
+  app.use("/oauth/deletion-facebook", deletionFacebook);
 
   app.use("/api/graphql", authenticateMiddleware,
     graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }),
