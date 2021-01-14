@@ -293,8 +293,8 @@ function signInFacebook(req, res) {
     }).then((list) => {
       console.log(list);
       // const [{ data }, { access_token }] = list;
-      const data = list[0].data;
-      const access_token = list[1].access_token;
+      const data = list[0].value.data;
+      const access_token = list[1].value.access_token;
       console.log("DDD", data, access_token);
       res({ success: true, user: { id: data.id, access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.facebook.com" } });
     }).catch(() => {
