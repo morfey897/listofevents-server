@@ -109,9 +109,12 @@ function signUpRouter(req, res) {
           if (phone) {
             conditions.push({ phone });
           }
+          console.log("FIND by: ", conditions);
           Users.findOne({ $or: conditions }).exec()
             .then(user => {
+              console.log("FINDONE", user);
               if (!user || user[type].id != userData.id) {
+                console.log("CHECK", user ? user[type].id : null, userData.id);
                 return (new Users({
                   [type]: { id: userData.id, link: userData.link, access_token: userData.access_token },
                   name: userData.first_name || "", surname: userData.last_name || "",
@@ -319,8 +322,11 @@ function deletionFacebook(req, res) {
       const { user_id } = facebookSignedRequest(signed_request, process.env.FACEBOOK_APP_SECRET);
       const confirmCode = shortid.generate();
 
-      Users.findOne({ [`${TYPE_FACEBOOK}.id`]: user_id }).exec()
+      const conditions = { [`${TYPE_FACEBOOK}.id`]: user_id };
+      console.log("FIND_DELETE", conditions);
+      Users.findOne(conditions).exec()
         .then(user => {
+          console.log("FINDED", user);
           if (!user) {
             res.sendStatus(400);
           } else if (!user[TYPE_INSTAGRAM].id && !user.email && !user.phone && !user.password) {
