@@ -42,10 +42,10 @@ function prepareUsername(username, type) {
 }
 
 function generate(user) {
-  if (!user) return { token: { accessToken: "", expiresIn: 0 }, user: { _id: 0, role: 0, name: "", surname: "", email: "", phone: "", facebook: {}, instagram: {} } };
+  if (!user) return { token: { accessToken: "", expiresIn: 0 }, user: { _id: 0, role: 0, name: "", surname: "", email: "", phone: "", [TYPE_FACEBOOK]: {}, [TYPE_INSTAGRAM]: {} } };
   const accessToken = jwt.sign({ _id: user._id, role: user.role }, process.env.TOKEN_SECRET, { expiresIn: process.env.TOKEN_LIFETIME });
   const decoded = jwt.decode(accessToken);
-  return { token: { accessToken, expiresIn: decoded.exp }, user: { _id: user._id, name: user.name, surname: user.surname, role: user.role, email: user.email, phone: user.phone, facebook: user.facebook, instagram: user.instagram } };
+  return { token: { accessToken, expiresIn: decoded.exp }, user: { _id: user._id, name: user.name, surname: user.surname, role: user.role, email: user.email, phone: user.phone, [TYPE_FACEBOOK]: user[TYPE_FACEBOOK], [TYPE_INSTAGRAM]: user[TYPE_INSTAGRAM] } };
 }
 
 function outhCodeRouter(req, res) {
@@ -241,9 +241,9 @@ function renameRouter(req, res) {
     if (id && link && access_token) {
       let args = {};
       if (facebook) {
-        args = inlineArgs({ facebook: { id, link, access_token } });
+        args = inlineArgs({ [TYPE_FACEBOOK]: { id, link, access_token } });
       } else if (instagram) {
-        args = inlineArgs({ instagram: { id, link, access_token } });
+        args = inlineArgs({ [TYPE_INSTAGRAM]: { id, link, access_token } });
       }
       Users.findOneAndUpdate({ _id: currentUserId }, { $set: args }, { new: true }).exec()
         .then(user => {
@@ -297,7 +297,6 @@ function signInFacebook(req, res) {
     SOCIAL_PROMISES[state] = promise;
   }
 
-
   res.send(`<!DOCTYPE html>
   <html>
   <head>
@@ -314,12 +313,47 @@ function signInFacebook(req, res) {
 }
 
 function deletionFacebook(req, res) {
-  console.log("QUERY", req.query);
-  console.log("BODY", req.body);
-  const data = facebookSignedRequest(req.body["signed_request"], process.env.FACEBOOK_APP_SECRET);
-  console.log("DATA", data);
-  const confirmCode = shortid.generate();
-  res.json({ 'url': `${process.env.HOST}/oauth/deletion-facebook?id=${confirmCode}`, 'confirmation_code': confirmCode });
+  const { signed_request } = req.body;
+  if (signed_request) {
+    try {
+      const { user_id } = facebookSignedRequest(signed_request, process.env.FACEBOOK_APP_SECRET);
+      const confirmCode = shortid.generate();
+
+      Users.findOne({ [`${TYPE_FACEBOOK}.id`]: user_id }).exec()
+        .then(user => {
+          if (!user) {
+            res.sendStatus(400);
+          } else if (!user[TYPE_INSTAGRAM].id && !user.email && !user.phone && !user.password) {
+            Users.deleteMany({ _id: user._id })
+              .then(({ deletedCount }) => {
+                if (deletedCount > 0) {
+                  res.json({ 'url': `${process.env.HOST}/oauth/deletion-facebook?confirmation_code=${confirmCode}`, 'confirmation_code': confirmCode });
+                }
+              });
+          } else {
+            Users.findOneAndUpdate({ _id: user._id }, { $set: inlineArgs({ [TYPE_FACEBOOK]: { id: "", link: "", access_token: "" } }) });
+          }
+        });
+    } catch (e) {
+      res.sendStatus(400);
+    }
+  } else {
+    const { confirmation_code } = req.query;
+    if (confirmation_code) {
+      res.send(`<!DOCTYPE html>
+      <html>
+      <head>
+          <title>Pdevents.com.ua</title>
+          <meta charset="utf-8" />
+      </head>
+      <body>
+          <h1>Your account was deleted</h1>
+      </body>
+      <html>`);
+    } else {
+      res.sendStatus(400);
+    }
+  }
 }
 
 module.exports = {
