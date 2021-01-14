@@ -342,6 +342,7 @@ function deletionFacebook(req, res) {
           }
         });
     } catch (e) {
+      console.log(e);
       res.sendStatus(400);
     }
   } else {
