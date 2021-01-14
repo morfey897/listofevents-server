@@ -241,10 +241,17 @@ function signOutRouter(req, res) {
   res.json({ success: true, data: generate() });
 }
 
+function signInFacebook(req, res) {
+  console.log("REQ_BODY:", req.body);
+  console.log("REQ_QUERY:", req.query);
+}
+
 module.exports = {
   signInRouter,
   signOutRouter,
   signUpRouter,
   renameRouter,
-  outhCodeRouter
+  outhCodeRouter,
+
+  signInFacebook
 };
