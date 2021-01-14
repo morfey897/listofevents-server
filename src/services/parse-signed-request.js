@@ -5,7 +5,7 @@ function facebookSignedRequest(signed_request, secret) {
   var encoded_sig = signed_request[0];
   var payload = signed_request[1];
 
-  var data = JSON.parse(new Buffer(payload, 'base64').toString());
+  var data = JSON.parse(Buffer.alloc(payload, 'base64').toString());
 
   if (data.algorithm.toUpperCase() !== 'HMAC-SHA256')
     return null;
