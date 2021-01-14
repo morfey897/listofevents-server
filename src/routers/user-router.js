@@ -260,6 +260,8 @@ function signInFacebook(req, res) {
     },
   }).then(({ data }) => {
     console.log("ACCESS_TOKEN", data.access_token);
+  }).catch(e => {
+    console.log("ERROR!!!", e);
   });
 
   res.send(`<!DOCTYPE html>
