@@ -93,7 +93,7 @@ function signUpRouter(req, res) {
     if (!state) {
       res.json({ success: false, ...getError(ERRORCODES.ERROR_CAN_NOT_CONNECT_SOCIAL) });
     } else {
-      const callBackFunction = (success, userData) => {
+      const callBackFunction = ({ success, user: userData }) => {
         console.log("CALLBACK", success, userData);
         if (!success) {
           res.json({ success: false, ...getError(ERRORCODES.ERROR_CAN_NOT_CONNECT_SOCIAL) });
@@ -277,18 +277,22 @@ function signInFacebook(req, res) {
         redirect_uri: `${process.env.HOST}/oauth/signin-facebook`,
         code,
       },
-    }).then(({ data }) => Promise.allSettled([
-      axios({
-        url: 'https://graph.facebook.com/me',
-        method: 'get',
-        params: {
-          fields: ['id', 'email', 'first_name', 'last_name'].concat(APPS.facebook.state === "production" ? "user_link" : "").filter(a => !!a).join(","),
-          access_token: data.access_token,
-        },
-      }),
-      Promise.resolve({ access_token: data.access_token })
-    ])).then(([{ data }, { access_token }]) => {
-      console.log(data, access_token);
+    }).then(({ data }) => {
+
+      return Promise.allSettled([
+        axios({
+          url: 'https://graph.facebook.com/me',
+          method: 'get',
+          params: {
+            fields: ['id', 'email', 'first_name', 'last_name'].concat(APPS.facebook.state === "production" ? "user_link" : "").filter(a => !!a).join(","),
+            access_token: data.access_token,
+          },
+        }),
+        Promise.resolve({ access_token: data.access_token })
+      ]);
+    }).then((list) => {
+      console.log(list);
+      const [{ data }, { access_token }] = list;
       res({ success: true, user: { id: data.id, access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.facebook.com" } });
     }).catch(() => {
       res({ success: false });
