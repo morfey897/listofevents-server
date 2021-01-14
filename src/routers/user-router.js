@@ -249,12 +249,10 @@ function signInFacebook(req, res) {
   console.log("REQ_QUERY:", req.query);
 
   const { code, state } = req.query;
-
-  axios.interceptors.request.use(request => {
-    console.log('Starting Request', JSON.stringify(request))
-    return request
-  })
-
+  // axios.interceptors.request.use(request => {
+  //   console.log('Starting Request', JSON.stringify(request))
+  //   return request
+  // })
   axios({
     url: 'https://graph.facebook.com/v9.0/oauth/access_token',
     method: 'get',
@@ -265,7 +263,16 @@ function signInFacebook(req, res) {
       code,
     },
   }).then(({ data }) => {
-    console.log("ACCESS_TOKEN", data.access_token);
+    return axios({
+      url: 'https://graph.facebook.com/me',
+      method: 'get',
+      params: {
+        fields: ['id', 'email', 'first_name', 'last_name'].concat(APPS.facebook.state === "production" ? "user_link" : "").filter(a => !!a).join(","),
+        access_token: data.access_token,
+      },
+    });
+  }).then(({ data }) => {
+    console.log("ME!!!", data);
   }).catch(e => {
     console.log("ERROR!!!", e);
   });
