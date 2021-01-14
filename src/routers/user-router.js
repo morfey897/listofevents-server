@@ -244,6 +244,19 @@ function signOutRouter(req, res) {
 function signInFacebook(req, res) {
   console.log("REQ_BODY:", req.body);
   console.log("REQ_QUERY:", req.query);
+  res.send(`<!DOCTYPE html>
+  <html>
+  <head>
+      <title>Pdevents</title>
+      <meta charset="utf-8" />
+      <script>
+          window.close();
+      </script>
+  </head>
+  <body>
+      <h1>SUCCESS</h1>
+  </body>
+  <html>`);
 }
 
 module.exports = {
