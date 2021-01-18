@@ -335,6 +335,7 @@ function signInInstagram(req, res) {
       url: 'https://api.instagram.com/oauth/access_token',
       method: 'post',
       data: formData,
+      headers: formData.getHeaders(),
     }).then((response) => {
       console.log(response);
       return response;
