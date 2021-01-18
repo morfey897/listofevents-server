@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const axios = require('axios').default;
+const FormData = require('form-data');
 const { transliterate } = require('inflected');
 const shortid = require('shortid');
 const Users = require("../models/user-model");
@@ -315,17 +316,25 @@ function signInFacebook(req, res) {
 
 function signInInstagram(req, res) {
   const { code, state } = req.query;
+  let formData = new FormData();
+  formData.append("client_id", APPS.instagram.appId);
+  formData.append("client_secret", process.env.INSTAGRAM_APP_SECRET);
+  formData.append("grant_type", "authorization_code");
+  formData.append("redirect_uri", `${process.env.HOST}/oauth/signin-instagram`);
+  formData.append("code", code);
+
+  // data: {
+  //   client_id: APPS.instagram.appId,
+  //   client_secret: process.env.INSTAGRAM_APP_SECRET,
+  //   grant_type: "authorization_code",
+  //   redirect_uri: `${process.env.HOST}/oauth/signin-instagram`,
+  //   code,
+  // }
   const promise = new Promise((res) => {
     axios({
       url: 'https://api.instagram.com/oauth/access_token',
       method: 'post',
-      data: {
-        client_id: APPS.instagram.appId,
-        client_secret: process.env.INSTAGRAM_APP_SECRET,
-        grant_type: "authorization_code",
-        redirect_uri: `${process.env.HOST}/oauth/signin-instagram`,
-        code,
-      },
+      data: formData,
     }).then((response) => {
       console.log(response);
       return response;
