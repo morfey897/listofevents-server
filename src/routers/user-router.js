@@ -334,7 +334,7 @@ function signInInstagram(req, res) {
     }).then(({ data }) => {
       console.log("RESPONSE", data);
       return axios({
-        url: `https://graph.instagram.com/${data.user_id}`,
+        url: `https://graph.instagram.com/me`,
         method: 'get',
         params: {
           fields: ['id', 'username'].filter(a => !!a).join(","),
