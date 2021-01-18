@@ -315,12 +315,11 @@ function signInFacebook(req, res) {
 
 function signInInstagram(req, res) {
   const { code, state } = req.query;
-  console.log("SIGNIN_INSTAGRAM", req.query);
   const promise = new Promise((res) => {
     axios({
       url: 'https://api.instagram.com/oauth/access_token',
       method: 'post',
-      params: {
+      data: {
         client_id: APPS.instagram.appId,
         client_secret: process.env.INSTAGRAM_APP_SECRET,
         grant_type: "authorization_code",
@@ -332,7 +331,6 @@ function signInInstagram(req, res) {
       return response;
     })
       .then(({ data }) => Promise.allSettled([
-        // '{user-id}?fields=id,username&access_token={access-token}'
         axios({
           url: `https://graph.instagram.com/${data.user_id}`,
           method: 'get',
