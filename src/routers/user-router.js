@@ -313,6 +313,61 @@ function signInFacebook(req, res) {
   <html>`);
 }
 
+function signInInstagram(req, res) {
+  const { code, state } = req.query;
+
+  const promise = new Promise((res) => {
+    axios({
+      url: 'https://api.instagram.com/oauth/access_token',
+      method: 'post',
+      params: {
+        client_id: APPS.instagram.appId,
+        client_secret: process.env.INSTAGRAM_APP_SECRET,
+        grant_type: "authorization_code",
+        redirect_uri: `${process.env.HOST}/oauth/signin-instagram`,
+        code,
+      },
+    }).then(({ data }) => Promise.allSettled([
+      // '{user-id}?fields=id,username&access_token={access-token}'
+      axios({
+        url: `https://graph.instagram.com/${data.user_id}`,
+        method: 'get',
+        params: {
+          fields: ['id', 'first_name', 'last_name', 'username'].filter(a => !!a).join(","),
+          access_token: data.access_token,
+        },
+      }),
+      Promise.resolve({ access_token: data.access_token })
+    ])).then(([{ value: insta }, { value: token }]) => {
+      const data = insta.data;
+      console.log("DATA RESPONSE", insta);
+      res({ success: true, user: { id: data.id, access_token: token.access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.instagram.com" } });
+    }).catch(() => {
+      res({ success: false });
+    });
+  });
+
+  // if (typeof SOCIAL_PROMISES[state] === "function") {
+  //   promise.then(SOCIAL_PROMISES[state])
+  // } else {
+  //   SOCIAL_PROMISES[state] = promise;
+  // }
+
+  res.send(`<!DOCTYPE html>
+  <html>
+  <head>
+      <title>Pdevents</title>
+      <meta charset="utf-8" />
+      <script>
+          window.close();
+      </script>
+  </head>
+  <body>
+      <h1>SUCCESS</h1>
+  </body>
+  <html>`);
+}
+
 function deletionFacebook(req, res) {
   const signed_request = req.body["signed_request"];
   if (signed_request) {
@@ -367,5 +422,7 @@ module.exports = {
   outhCodeRouter,
 
   signInFacebook,
-  deletionFacebook
+  deletionFacebook,
+
+  signInInstagram
 };

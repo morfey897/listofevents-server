@@ -5,6 +5,9 @@
   "APPS": {
     "facebook": {
       "appId": "437805930905669", "state": "development"
+    },
+    "instagram": {
+      "appId": "466882121139453", "state": "development"
     }
   },
   "ROLES": {

@@ -7,7 +7,7 @@ const { graphqlUploadExpress } = require('graphql-upload');
 const mongoose = require("mongoose");
 const AppSchema = require("./graphql");
 const { authenticateMiddleware, authenticateBasicMiddleware, authenticateBearerMiddleware } = require("./middlewares");
-const { signInRouter, signOutRouter, signUpRouter, outhCodeRouter, renameRouter, configRouter, signInFacebook, deletionFacebook } = require("./routers");
+const { signInRouter, signOutRouter, signUpRouter, outhCodeRouter, renameRouter, configRouter, signInFacebook, deletionFacebook, signInInstagram } = require("./routers");
 
 const { getError } = require("./errors");
 
@@ -29,6 +29,8 @@ function start() {
   app.post("/oauth/signup", authenticateBasicMiddleware, signUpRouter);
   app.use("/oauth/signin-facebook", signInFacebook);
   app.use("/oauth/deletion-facebook", deletionFacebook);
+  
+  app.use("/oauth/signin-instagram", signInInstagram);
 
   app.use("/api/graphql", authenticateMiddleware,
     graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }),
