@@ -331,7 +331,9 @@ function signInInstagram(req, res) {
       headers: {
         "Content-Type": 'application/x-www-form-urlencoded'
       },
-    }).then(({ data }) => Promise.allSettled([
+    }).then(({ data }) => {
+      console.log("RESPONSE", data);
+      return Promise.allSettled([
         axios({
           url: `https://graph.instagram.com/${data.user_id}`,
           method: 'get',
@@ -341,15 +343,16 @@ function signInInstagram(req, res) {
           },
         }),
         Promise.resolve({ access_token: data.access_token })
-      ])).then((list) => {
-        console.log("DATA RESPONSE", list);
-        const [{ value: insta }, { value: token }] = list;
-        const data = insta.data;
-        res({ success: true, user: { id: data.id, access_token: token.access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.instagram.com" } });
-      }).catch((e) => {
-        console.log("ERROR", e);
-        res({ success: false });
-      });
+      ]);
+    }).then((list) => {
+      console.log("DATA RESPONSE", list);
+      const [{ value: insta }, { value: token }] = list;
+      const data = insta.data;
+      res({ success: true, user: { id: data.id, access_token: token.access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.instagram.com" } });
+    }).catch((e) => {
+      console.log("ERROR", e);
+      res({ success: false });
+    });
   });
 
   // if (typeof SOCIAL_PROMISES[state] === "function") {
