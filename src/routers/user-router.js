@@ -338,7 +338,7 @@ function signInInstagram(req, res) {
           url: `https://graph.instagram.com/${data.user_id}`,
           method: 'get',
           params: {
-            fields: ['id', 'first_name', 'last_name', 'username'].filter(a => !!a).join(","),
+            fields: ['id', 'username'].filter(a => !!a).join(","),
             access_token: data.access_token,
           },
         }),
