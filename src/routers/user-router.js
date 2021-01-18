@@ -1,6 +1,5 @@
 const jwt = require("jsonwebtoken");
 const axios = require('axios').default;
-const FormData = require('form-data');
 const { transliterate } = require('inflected');
 const shortid = require('shortid');
 const Users = require("../models/user-model");
@@ -344,19 +343,21 @@ function signInInstagram(req, res) {
     ])
     ).then(([{ value: insta }, { value: token }]) => {
       const data = insta.data;
-      console.log("DATA", data, token);
-      res({ success: true, user: { id: data.id, access_token: token.access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.instagram.com" } });
+      let username = data.username.replace(/\d/g, "");
+      // eslint-disable-next-line no-useless-escape
+      const [first_name, last_name] = username.split(/[\._]/).filter(a => !!a);
+      res({ success: true, user: { id: data.id, access_token: token.access_token, first_name, last_name, link: `https://www.instagram.com/${username.username}` } });
     }).catch((e) => {
       console.log("ERROR", e);
       res({ success: false });
     });
   });
 
-  // if (typeof SOCIAL_PROMISES[state] === "function") {
-  //   promise.then(SOCIAL_PROMISES[state])
-  // } else {
-  //   SOCIAL_PROMISES[state] = promise;
-  // }
+  if (typeof SOCIAL_PROMISES[state] === "function") {
+    promise.then(SOCIAL_PROMISES[state])
+  } else {
+    SOCIAL_PROMISES[state] = promise;
+  }
 
   res.send(`<!DOCTYPE html>
   <html>
@@ -428,6 +429,5 @@ module.exports = {
 
   signInFacebook,
   deletionFacebook,
-
   signInInstagram
 };
