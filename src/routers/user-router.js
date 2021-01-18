@@ -331,11 +331,7 @@ function signInInstagram(req, res) {
       headers: {
         "Content-Type": 'application/x-www-form-urlencoded'
       },
-    }).then((response) => {
-      console.log(response);
-      return response;
-    })
-      .then(({ data }) => Promise.allSettled([
+    }).then(({ data }) => Promise.allSettled([
         axios({
           url: `https://graph.instagram.com/${data.user_id}`,
           method: 'get',
@@ -345,9 +341,10 @@ function signInInstagram(req, res) {
           },
         }),
         Promise.resolve({ access_token: data.access_token })
-      ])).then(([{ value: insta }, { value: token }]) => {
+      ])).then((list) => {
+        console.log("DATA RESPONSE", list);
+        const [{ value: insta }, { value: token }] = list;
         const data = insta.data;
-        console.log("DATA RESPONSE", insta);
         res({ success: true, user: { id: data.id, access_token: token.access_token, email: data.email, first_name: data.first_name, last_name: data.last_name, link: data.user_link || "https://www.instagram.com" } });
       }).catch((e) => {
         console.log("ERROR", e);
