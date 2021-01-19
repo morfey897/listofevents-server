@@ -1,6 +1,7 @@
 const Config = require('../config');
 
 function configRouter(req, res) {
+  const { locale } = req.query;
 
   const data = {};
   for (let name in Config) {

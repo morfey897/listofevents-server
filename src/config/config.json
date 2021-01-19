@@ -1,16 +1,20 @@
 {
   "LANGS": [
+    "uk",
     "ru"
   ],
   "APPS": {
     "facebook": {
-      "appId": "437805930905669", "state": "development"
+      "appId": "437805930905669",
+      "state": "development"
     },
     "instagram": {
-      "appId": 466882121139453, "state": "development"
+      "appId": "466882121139453",
+      "state": "development"
     },
     "google": {
-      "appId": "658977310896-knrl3gka66fldh83dao2rhgbblmd4un9.apps.googleusercontent.com", "state": "development"
+      "appId": "165090985583-7rm0spu6cen9olrc7at95v36192v0fm7.apps.googleusercontent.com",
+      "state": "development"
     }
   },
   "ROLES": {
@@ -20,5 +24,12 @@
     "moderator": 32,
     "admin": 128,
     "super_admin": 512
+  },
+  "SIGNIN": {
+    "email": "email",
+    "phone": "phone",
+    "facebook": "facebook",
+    "instagram": "instagram",
+    "google": "google"
   }
 }

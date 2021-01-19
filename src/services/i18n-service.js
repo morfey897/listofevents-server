@@ -7,6 +7,6 @@ i18n.configure({
   directory: path.join(__dirname, '../locales'),
 });
 
-i18n.setLocale('ru');
+i18n.setLocale('uk');
 
 module.exports = i18n;

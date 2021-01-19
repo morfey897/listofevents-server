@@ -16,7 +16,8 @@ const userSchema = new Schema(
     password: Schema.Types.String,
     // #Social
     facebook: array2Obj(SOCIAL_FIELDS, Schema.Types.String),
-    instagram: array2Obj(SOCIAL_FIELDS, Schema.Types.String)
+    instagram: array2Obj(SOCIAL_FIELDS, Schema.Types.String),
+    google: array2Obj(SOCIAL_FIELDS, Schema.Types.String)
   }
 );
 

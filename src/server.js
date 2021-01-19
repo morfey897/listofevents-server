@@ -20,13 +20,15 @@ function start() {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: false }));
 
-  app.use("/api/config", authenticateMiddleware, configRouter);
+  app.post("/api/config", authenticateMiddleware, configRouter);
   app.post("/oauth/rename", authenticateBearerMiddleware, renameRouter);
   app.post("/oauth/outhcode", authenticateMiddleware, outhCodeRouter);
 
   app.post("/oauth/signin", authenticateBasicMiddleware, signInRouter);
   app.post("/oauth/signout", authenticateBearerMiddleware, signOutRouter);
   app.post("/oauth/signup", authenticateBasicMiddleware, signUpRouter);
+  
+  // app.use("/oauth/signin-google", signInGoogle);
   // app.use("/oauth/signin-facebook", signInFacebook);
   // app.use("/oauth/deletion-facebook", deletionFacebook);
   // app.use("/oauth/signin-instagram", signInInstagram);
