@@ -227,6 +227,7 @@ function signInRouter(req, res) {
   const type = getUsernameType(req.body.username);
   if (type == SIGNIN.email || type == SIGNIN.phone) {
     // Filter user from the users array by username and password
+    console.log("REQ", { password: password, [type]: prepareUsername(req.body.username, type) });
     Users.findOne({ password: password, [type]: prepareUsername(req.body.username, type) }).exec()
       .then(user => {
         if (!user) throw new Error("Not exist");
