@@ -225,17 +225,19 @@ function signUpRouter(req, res) {
 function signInRouter(req, res) {
   const { password } = req.body;
   const type = getUsernameType(req.body.username);
-  const username = prepareUsername(req.body.username, type);
-
-  // Filter user from the users array by username and password
-  Users.findOne({ password: password || Math.random(), $or: [{ phone: username }, { email: username }] }).exec()
-    .then(user => {
-      if (!user) throw new Error("Not exist");
-      res.json({ success: true, data: generate(user, type) });
-    })
-    .catch(() => {
-      res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_NOT_EXIST) });
-    });
+  if (type == SIGNIN.email || type == SIGNIN.phone) {
+    // Filter user from the users array by username and password
+    Users.findOne({ password: password, [type]: prepareUsername(req.body.username, type) }).exec()
+      .then(user => {
+        if (!user) throw new Error("Not exist");
+        res.json({ success: true, data: generate(user, type) });
+      })
+      .catch(() => {
+        res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_NOT_EXIST) });
+      });
+  } else {
+    res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_NOT_EXIST) });
+  }
 }
 
 function renameRouter(req, res) {
