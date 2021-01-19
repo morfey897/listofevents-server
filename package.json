@@ -6,6 +6,7 @@
     "start": "export NODE_ENV=development && nodemon ./index.js",
     "gnr-jwt-secret": "node ./src/scripts/generate-jwt-secret",
     "gnr-password": "node ./src/scripts/generate-password",
+    "gnr-md5-password": "node ./src/scripts/md5-password",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

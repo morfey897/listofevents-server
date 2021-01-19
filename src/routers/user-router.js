@@ -5,7 +5,7 @@ const shortid = require('shortid');
 const { OAuth2Client } = require('google-auth-library');
 const Users = require("../models/user-model");
 const AuthCodes = require("../models/authcode-model");
-const { jsTrim, inlineArgs } = require('../utils/validation-utill');
+const { jsTrim, inlineArgs, md5Password } = require('../utils/validation-utill');
 const { ROLES, SIGNIN, APPS, LANGS } = require("../config");
 const ms = require("ms");
 const { ERRORCODES, getError } = require("../errors");
@@ -43,14 +43,17 @@ function prepareUsername(username, type) {
 }
 
 function generate(user, login) {
-  const signin = Object.keys(SIGNIN).map(v => ({ [v]: "" }));
+  const signin = Object.values(SIGNIN).reduce((cur, v) => {
+    cur[v] = "";
+    return cur;
+  }, {});
 
   if (!user) return { token: { accessToken: "", expiresIn: 0 }, user: { _id: 0, role: 0, name: "", surname: "", ...signin } };
   const accessToken = jwt.sign({ _id: user._id, role: user.role, login }, process.env.TOKEN_SECRET, { expiresIn: process.env.TOKEN_LIFETIME });
   const decoded = jwt.decode(accessToken);
 
   for (let n in signin) {
-    signin[n] = n == SIGNIN.email || n == SIGNIN.phone ? user[n] : user[n].id;
+    signin[n] = typeof user[n] === "object" ? user[n].id : user[n];
   }
 
   return {
@@ -190,7 +193,7 @@ function signUpRouter(req, res) {
     const { password, code, username, name } = req.body;
     const names = (name || "").trim().split(/\s+/);
     const type = getUsernameType(username);
-    if (type != SIGNIN.email && type != SIGNIN.phone) {
+    if ((type != SIGNIN.email && type != SIGNIN.phone) || !password) {
       res.json({ success: false, ...getError(ERRORCODES.ERROR_INCORRECT_USERNAME) });
     } else {
       const readyUsername = prepareUsername(username, type);
@@ -207,7 +210,7 @@ function signUpRouter(req, res) {
               name: names[0] || "", surname: names[1] || "",
               email: type === SIGNIN.email ? readyUsername : "",
               phone: type === SIGNIN.phone ? readyUsername : "",
-              password, role: getRole(type)
+              password: md5Password(password), role: getRole(type)
             })).save()
               .then(user => {
                 res.json({ success: true, data: generate(user, type) });
@@ -225,15 +228,16 @@ function signUpRouter(req, res) {
 function signInRouter(req, res) {
   const { password } = req.body;
   const type = getUsernameType(req.body.username);
-  if (type == SIGNIN.email || type == SIGNIN.phone) {
+  if (type == SIGNIN.email || type == SIGNIN.phone || !password) {
     // Filter user from the users array by username and password
-    console.log("REQ", { password: password, [type]: prepareUsername(req.body.username, type) });
-    Users.findOne({ password: password, [type]: prepareUsername(req.body.username, type) }).exec()
+    const md5Pass = md5Password(password);
+    Users.findOne({ password: md5Pass, [type]: prepareUsername(req.body.username, type) }).exec()
       .then(user => {
         if (!user) throw new Error("Not exist");
         res.json({ success: true, data: generate(user, type) });
       })
-      .catch(() => {
+      .catch((e) => {
+        console.log(e);
         res.json({ success: false, ...getError(ERRORCODES.ERROR_USER_NOT_EXIST) });
       });
   } else {
