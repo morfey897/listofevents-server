@@ -25,7 +25,7 @@ const updateUser = {
     
     let success;
     let error;
-    if (!user || ((user.role & ROLES.super_admin) !== ROLES.super_admin && (user.role & ROLES.admin) !== ROLES.admin && user.id !== id)) {
+    if (!user || ((user.role & ROLES.super_admin) !== ROLES.super_admin && (user.role & ROLES.admin) !== ROLES.admin && user._id !== id)) {
       error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
     } else if (!isValidId(id)) {
       error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
@@ -34,7 +34,7 @@ const updateUser = {
         success = await UserModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim({ ...args, role: role || ROLES.user }, ["email", "phone", "name", "surname"])) }, { new: true });
       } else if ((user.role & ROLES.admin) == ROLES.admin) {
         success = await UserModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, ["email", "phone", "name", "surname"])) }, { new: true });
-      } else if (user.id === id) {
+      } else if (user._id === id) {
         success = await UserModel.findOneAndUpdate({ _id: id }, { $set: inlineArgs(jsTrim(args, ["email", "phone", "name", "surname"])) }, { new: true });
       }
     }

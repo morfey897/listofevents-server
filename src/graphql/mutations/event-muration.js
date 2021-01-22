@@ -106,7 +106,7 @@ const createEvent = {
             duration,
             city_id: cityModel._id,
             category_id: categoryModel._id,
-            author_id: user.id,
+            author_id: user._id,
             ...jsTrim({ url, name, location }),
           })).save();
         }
@@ -152,7 +152,7 @@ const updateEvent = {
       error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
     } else {
       let eventModel = await EventModel.findOne({ _id });
-      if (!user || !eventModel || ((user.role & ROLES.moderator) !== ROLES.moderator && eventModel.author_id != user.id)) {
+      if (!user || !eventModel || ((user.role & ROLES.moderator) !== ROLES.moderator && eventModel.author_id != user._id)) {
         error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
       } else {
         if (!isValidUrl(url) || eventModel.url == url) {
@@ -239,7 +239,7 @@ const deleteEvent = {
       let deleteInfo = await EventModel.deleteMany({ _id: { $in: ids } });
       return deleteInfo.deletedCount;
     } else if (user) {
-      let deleteInfo = await EventModel.deleteMany({ $and: [{ _id: { $in: ids } }, { author_id: user.id }] });
+      let deleteInfo = await EventModel.deleteMany({ $and: [{ _id: { $in: ids } }, { author_id: user._id }] });
       return deleteInfo.deletedCount;
     } 
     
