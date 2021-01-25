@@ -1,12 +1,11 @@
 const { GraphQLString, GraphQLID, GraphQLNonNull, GraphQLList, GraphQLFloat, GraphQLError } = require('graphql')
-const shortid = require('shortid');
 const { GraphQLUpload } = require('graphql-upload');
 
 const CategoryModel = require('../../models/category-model');
 const ImageModel = require('../../models/image-model');
 const CategoryType = require('../types/category-type');
 
-const { isValidId, jsTrim, jsSanitize, isValidUrl, inlineArgs, isValidTag } = require('../../utils/validation-utill');
+const { isValidId, jsTrim, jsSanitize, isValidUrl, inlineArgs, isValidTag, generateUrl } = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
 const { ROLES } = require('../../config');
 const { ERRORCODES } = require('../../errors');
@@ -33,7 +32,7 @@ const createCategory = {
     } if (!isValidUrl(url)) {
       error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_URL);
     } else {
-      url += "-" + shortid.generate();
+      url = generateUrl(url);
 
       const fileResults = await Promise.allSettled(images.map(uploadFileAWS));
 
@@ -52,6 +51,9 @@ const createCategory = {
         images_id: imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id),
         tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
         description: jsSanitize(description),
+        author_id: user._id,
+        created_at: Date.now(),
+        updated_at: Date.now(),
         ...jsTrim({ url, name })
       })).save();
     }
@@ -67,30 +69,51 @@ const createCategory = {
 const updateCategory = {
   type: CategoryType,
   args: {
-    id: { type: GraphQLID },
+    _id: { type: GraphQLID },
     url: { type: GraphQLString },
     name: { type: TranslateInputType },
     description: { type: TranslateInputType },
     tags: { type: new GraphQLList(GraphQLString) },
-    // images: { type: new GraphQLList(GraphQLString) },
+    images: { type: new GraphQLList(GraphQLString) },
+    add_images: { type: new GraphQLList(GraphQLUpload) },
   },
-  resolve: async function (_, { id, tags, description, ...args }, context) {
+  resolve: async function (_, body, context) {
+    let { _id, url, tags, description, name, images, add_images } = body;
     const { user } = context;
     let success = null;
     let error = null;
 
-    if (!user || (user.role & ROLES.moderator) !== ROLES.moderator) {
-      error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+    if (!isValidId(_id)) {
+      error = new GraphQLError(ERRORCODES.ERROR_INCORRECT_ID);
     } else {
+      let categoryModel = await CategoryModel.findOne({ _id });
+      if (!user || !categoryModel || (user.role & ROLES.moderator) !== ROLES.moderator) {
+        error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
+      } else {
+        url = isValidUrl(url) && categoryModel.url != url ? generateUrl(url) : "";
 
-      args.url = isValidUrl(args.url) ? args.url + "-" + shortid.generate() : "";
-      success = await CategoryModel.findOneAndUpdate({ _id: id }, {
-        $set: inlineArgs({
-          tags: tags && tags.length > 0 && tags.map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
-          description: description && jsSanitize(description),
-          ...jsTrim(args, { name: true, url: true, })
-        })
-      }, { new: true });
+        const fileResults = await Promise.allSettled(add_images.map(uploadFileAWS));
+
+        let filesComplete = [];
+        fileResults.forEach(({ value }) => {
+          if (value) {
+            filesComplete.push((new ImageModel({
+              url: value.path
+            })).save());
+          }
+        });
+
+        let imagesData = await Promise.allSettled(filesComplete);
+
+        let args = {
+          images_id: [...images].concat(imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id)),
+          tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
+          description: jsSanitize(description),
+          updated_at: Date.now(),
+          ...jsTrim({ url, name }),
+        };
+        success = await CategoryModel.findOneAndUpdate({ _id }, { $set: inlineArgs(args) }, { new: true });
+      }
     }
 
     if (!success) {

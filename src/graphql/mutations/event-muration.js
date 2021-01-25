@@ -1,7 +1,6 @@
 const { GraphQLString, GraphQLNonNull, GraphQLList, GraphQLInputObjectType, GraphQLError, GraphQLInt } = require('graphql')
 const { GraphQLDateTime } = require('graphql-iso-date');
 const { GraphQLUpload } = require('graphql-upload');
-const shortid = require('shortid');
 
 const EventModel = require('../../models/event-model');
 const ImageModel = require('../../models/image-model');
@@ -10,7 +9,7 @@ const CityModel = require('../../models/city-model');
 
 const EventType = require('../types/event-type');
 
-const { isValidId, inlineArgs, jsTrim, isValidUrl, jsSanitize, isValidTag } = require('../../utils/validation-utill');
+const { isValidId, inlineArgs, jsTrim, isValidUrl, jsSanitize, isValidTag, generateUrl} = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
 
 const { ROLES } = require('../../config');
@@ -82,7 +81,7 @@ const createEvent = {
         if (!cityModel) {
           error = new GraphQLError(ERRORCODES.ERROR_CITY_NOT_EXIST);
         } else {
-          url += "-" + shortid.generate();
+          url = generateUrl(url);
 
           const fileResults = await Promise.allSettled(images.map(uploadFileAWS));
 
@@ -136,7 +135,6 @@ const updateEvent = {
     category_id: { type: new GraphQLNonNull(GraphQLString) },
     city: { type: new GraphQLNonNull(CityInputType) },
     images: { type: new GraphQLList(GraphQLString) },
-
     add_images: { type: new GraphQLList(GraphQLUpload) },
   },
   resolve: async function (_, body, context) {
@@ -155,16 +153,7 @@ const updateEvent = {
       if (!user || !eventModel || ((user.role & ROLES.moderator) !== ROLES.moderator && eventModel.author_id != user._id)) {
         error = new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
       } else {
-        if (!isValidUrl(url) || eventModel.url == url) {
-          url = "";
-        } else {
-          let checkSID = url.split("-");
-          if (shortid.isValid(checkSID[checkSID.length - 1])) {
-            url = url.replace("-" + checkSID[checkSID.length - 1], "");
-          }
-          url += "-" + shortid.generate();
-        }
-
+        url = isValidUrl(url) && eventModel.url != url ? generateUrl(url) : "";
         //Check category
         let categoryModel = null;
         if (isValidId(category_id)) {

@@ -1,5 +1,7 @@
 const sanitizeHtml = require('sanitize-html');
 const crypto = require('crypto');
+const shortid = require('shortid');
+
 const isValidId = (id) => id && /^[0-9a-fA-F]{24}$/.test(id);
 const isValidTag = (tag) => tag && /^\s*#\w+\s*$/.test(tag);
 const isValidUrl = (url) => url && /^\s*\/[a-z][\w-]{2,}[a-z0-9]\s*$/.test(url);
@@ -60,6 +62,10 @@ const jsSanitize = (args, filter) => {
 
 const inlineArgs = (args) => _mutateArgs(args, [], {});
 
+const generateUrl = (url) => {
+  url = url.split("--")[0];
+  return `${url}--${shortid.generate()}`;
+}
 const md5Password = (password) => crypto.createHash('md5').update(password).digest("hex")
 
 module.exports = {
@@ -70,5 +76,6 @@ module.exports = {
   jsSanitize,
   jsTrim,
   inlineArgs,
-  md5Password
+  md5Password,
+  generateUrl
 };

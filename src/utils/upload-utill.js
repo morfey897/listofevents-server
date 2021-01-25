@@ -11,7 +11,7 @@ const s3 = new AWS.S3({
 
 const imageMaxWidth = parseInt(process.env.IMAGE_MAX_WIDTH);
 
-const fileName = (filename, mimetype) => `${filename.replace(/\.\w+$/, "")}-${shortid.generate()}.${mime.extension(mimetype)}`;
+const fileName = (filename, mimetype) => `${filename.replace(/\.\w+$/, "")}--${shortid.generate()}.${mime.extension(mimetype)}`;
 
 const streamToBuffer = (fileStream) => new Promise((resolve, reject) => {
   let chunks = [];
