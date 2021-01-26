@@ -1,4 +1,4 @@
-const EventMutation = require('./event-muration');
+const EventMutation = require('./event-mutation');
 const CityMutation = require('./city-mutation');
 const CategoryMutation = require('./category-mutation');
 const ImageMutation = require('./image-mutation');

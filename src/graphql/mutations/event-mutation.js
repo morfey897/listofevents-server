@@ -9,7 +9,7 @@ const CityModel = require('../../models/city-model');
 
 const EventType = require('../types/event-type');
 
-const { isValidId, inlineArgs, jsTrim, isValidUrl, jsSanitize, isValidTag, generateUrl} = require('../../utils/validation-utill');
+const { isValidId, inlineArgs, jsTrim, isValidUrl, jsSanitize, isValidTag, generateUrl } = require('../../utils/validation-utill');
 const TranslateInputType = require('../inputs/translate-input-type');
 
 const { ROLES } = require('../../config');
@@ -195,15 +195,18 @@ const updateEvent = {
         let args = {
           images_id: [...images].concat(imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id)),
           tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
-          description: jsSanitize(description),
-          updated_at: Date.now(),
-          date,
-          duration,
           city_id,
           category_id,
-          ...jsTrim({ url, name, location }),
+          updated_at: Date.now(),
+          ...inlineArgs({
+            description: jsSanitize(description),
+            date,
+            duration,
+            ...jsTrim({ url, name, location })
+          }),
         };
-        success = await EventModel.findOneAndUpdate({ _id }, { $set: inlineArgs(args) }, { new: true });
+
+        success = await EventModel.findOneAndUpdate({ _id }, { $set: args }, { new: true });
       }
     }
 
@@ -230,12 +233,12 @@ const deleteEvent = {
     } else if (user) {
       let deleteInfo = await EventModel.deleteMany({ $and: [{ _id: { $in: ids } }, { author_id: user._id }] });
       return deleteInfo.deletedCount;
-    } 
-    
+    }
+
     throw new GraphQLError(ERRORCODES.ERROR_ACCESS_DENIED);
   }
 }
 
-module.exports = { 
-  graphql: { createEvent, updateEvent, deleteEvent } 
+module.exports = {
+  graphql: { createEvent, updateEvent, deleteEvent }
 };

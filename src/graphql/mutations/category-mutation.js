@@ -69,10 +69,11 @@ const createCategory = {
 const updateCategory = {
   type: CategoryType,
   args: {
-    _id: { type: GraphQLID },
-    url: { type: GraphQLString },
-    name: { type: TranslateInputType },
-    description: { type: TranslateInputType },
+    _id: { type: new GraphQLNonNull(GraphQLString) },
+
+    url: { type: new GraphQLNonNull(GraphQLString) },
+    name: { type: new GraphQLNonNull(TranslateInputType) },
+    description: { type: new GraphQLNonNull(TranslateInputType) },
     tags: { type: new GraphQLList(GraphQLString) },
     images: { type: new GraphQLList(GraphQLString) },
     add_images: { type: new GraphQLList(GraphQLUpload) },
@@ -108,11 +109,14 @@ const updateCategory = {
         let args = {
           images_id: [...images].concat(imagesData.filter(({ status }) => status == 'fulfilled').map(({ value: { _id } }) => _id)),
           tags: (tags || []).map(tag => jsTrim(tag)).filter(tag => isValidTag(tag)),
-          description: jsSanitize(description),
           updated_at: Date.now(),
-          ...jsTrim({ url, name }),
+          ...inlineArgs({
+            description: jsSanitize(description),
+            ...jsTrim({ url, name }),
+          })
         };
-        success = await CategoryModel.findOneAndUpdate({ _id }, { $set: inlineArgs(args) }, { new: true });
+
+        success = await CategoryModel.findOneAndUpdate({ _id }, { $set: args }, { new: true });
       }
     }
 

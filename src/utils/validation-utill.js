@@ -63,7 +63,7 @@ const jsSanitize = (args, filter) => {
 const inlineArgs = (args) => _mutateArgs(args, [], {});
 
 const generateUrl = (url) => {
-  url = url.split("--")[0];
+  url = url.replace(/-{2}[A-Za-z0-9_-]{7,14}$/, "");
   return `${url}--${shortid.generate()}`;
 }
 const md5Password = (password) => crypto.createHash('md5').update(password).digest("hex")

@@ -4,6 +4,7 @@ const CategoryModel = require('../../models/category-model');
 const CategoryType = require('../types/category-type');
 const { isValidId } = require('../../utils/validation-utill');
 const PaginateType = require('../types/paginate-type');
+const SortByType = require('../types/sortby-type');
 const { filterField } = require('../../utils/filter-utill');
 const { ERRORCODES } = require('../../errors');
 
@@ -48,10 +49,11 @@ const getCategories = {
   description: "List of all categories",
   args: {
     ids: { type: new GraphQLList(GraphQLString) },
+    sortBy: { type: SortByType },
     paginate: { type: PaginateType },
   },
   resolve: async function (_, args) {
-    const { paginate, ids } = args || {};
+    const { paginate, sortBy, ids } = args || {};
     let idList = ids && ids.filter(id => isValidId(id)) || [];
     let list = [];
     let offset = 0;
@@ -61,7 +63,11 @@ const getCategories = {
     } else {
       const limit = paginate && Math.min(paginate.limit || MAX_SIZE, MAX_SIZE);
       offset = Math.min(paginate && paginate.offset || 0, total);
-      list = await CategoryModel.find({})
+      list = await CategoryModel.find(
+        {}, null,
+        {
+          sort: sortBy ? { [sortBy.field]: sortBy.sort } : {}
+        })
         .skip(offset)
         .limit(limit);
     }
